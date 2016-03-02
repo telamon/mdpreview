@@ -8,6 +8,7 @@ import gobject
 import webkit
 import json
 import markdown
+import pyinotify
 
 
 html_header = """<!DOCTYPE html>
@@ -24,10 +25,12 @@ html_header = """<!DOCTYPE html>
 """
 
 
+
 class MBViewApp:
-    def __init__(self, md_file, conf_file='~/.mdview.conf'):
-        self.md_file = md_file
+    def __init__(self, md_file, conf_file='~/.mdview.conf', auto_reload=True):
+        self.md_file = os.path.realpath(md_file)
         self.conf_file = conf_file
+        self.auto_reload = auto_reload
         self.scroll_pos = None
 
         # Create default window state. Then override default window state with
@@ -61,7 +64,26 @@ class MBViewApp:
         self.win_main.show_all()
         self.win_main.move(self.win_state['pos_x'], self.win_state['pos_y'])
 
-        self.load_markdown(file(md_file, 'r').read())
+        self.load_markdown(file(self.md_file, 'r').read())
+
+        # Setup the inotify watcher
+        if self.auto_reload:
+            self.wm = pyinotify.WatchManager()
+            mask = pyinotify.IN_MODIFY
+            self.wm.add_watch(os.path.dirname(self.md_file), mask, rec=True) # FIXME: PATH
+            self.notifier = pyinotify.Notifier(self.wm, self.auto_reload_handler, timeout=10)
+            gobject.timeout_add(200, self.auto_reload_timer)
+
+    def auto_reload_handler(self, event):
+        if event.pathname == self.md_file:
+            self.load_markdown(file(self.md_file, 'r').read())
+
+    def auto_reload_timer(self):
+        self.notifier.process_events()
+        while self.notifier.check_events():  #loop in case more events appear while we are processing
+            self.notifier.read_events()
+            self.notifier.process_events()
+        return True
 
     def load_win_state(self):
         try:
