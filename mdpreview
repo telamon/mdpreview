@@ -1,0 +1,143 @@
+#!/usr/bin/python
+
+import sys
+import os
+import optparse
+import gtk
+import gobject
+import webkit
+import json
+import markdown
+
+
+html_header = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { margin: 20px; }
+        img { max-width: 100%; height: auto; }
+        pre { padding: 5px; background-color: #F0F0F0; }
+    </style>
+</head>
+<body>
+"""
+
+
+class MBViewApp:
+    def __init__(self, md_file, conf_file='~/.mdview.conf'):
+        self.md_file = md_file
+        self.conf_file = conf_file
+
+        # Create default window state. Then override default window state with
+        # configuration, if it exists.
+        self.win_state = {
+            'height': 700,
+            'width': 900,
+            'pos_x': 100,
+            'pos_y': 100,
+            'zoom_level': 1,
+        }
+        self.load_win_state()
+
+        self.win_main = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.win_main.resize(self.win_state['width'], self.win_state['height'])
+        self.win_main.connect("destroy", self.ev_destroy)
+        self.win_main.connect("configure-event", self.ev_resize)
+        self.win_main.connect("key-press-event", self.ev_key_press)
+
+        self.webview = webkit.WebView()
+        ws = self.webview.get_settings()
+        ws.set_property('enable-plugins',False)
+        self.webview.set_settings(ws)
+        self.webview.set_zoom_level(self.win_state['zoom_level'])
+
+        self.scroll_window = gtk.ScrolledWindow(None, None)
+        self.scroll_window.add(self.webview)
+
+        self.win_main.add(self.scroll_window)
+        self.win_main.show_all()
+        self.win_main.move(self.win_state['pos_x'], self.win_state['pos_y'])
+
+        self.load_markdown(file(md_file, 'r').read())
+
+    def load_win_state(self):
+        try:
+            with open(os.path.expanduser(self.conf_file), 'r') as f:
+                self.win_state.update(json.load(f))
+        except IOError as err:
+            if err.errno == 2:
+                pass
+            else:
+                raise
+
+    def save_win_state(self):
+        json.dump(self.win_state, file(os.path.expanduser('~/.mdview.conf'), 'w'))
+
+    def reload(self):
+        self.load_markdown(file(self.md_file, 'r').read())
+
+    def run(self):
+        gtk.main()
+
+    def stop(self):
+        self.save_win_state()
+        gtk.main_quit()
+
+    def load_markdown(self, md_text):
+        html = html_header + markdown.markdown(md_text)
+        self.webview.load_html_string(html, 'file:///')
+
+    def ev_key_press(self, widget, ev):
+        """
+        Handle keypress events.
+        """
+        if ev.keyval == gtk.keysyms.Escape:
+            self.stop()
+        elif ev.keyval in (gtk.keysyms.plus, gtk.keysyms.equal):
+            self.webview.set_zoom_level(self.webview.get_zoom_level() + 0.2)
+        elif ev.keyval == gtk.keysyms.minus:
+            self.webview.set_zoom_level(self.webview.get_zoom_level() - 0.2)
+        elif ev.keyval == gtk.keysyms.r:
+            self.reload()
+
+    def ev_resize(self, window, ev_reposition):
+        """
+        Save window position and size on resize and move. We can then save it
+        later when the application quits, even after the 'destroy' event has
+        been triggered.
+        """
+        win_size = self.win_main.get_size()
+        win_pos = self.win_main.get_position()
+        zoom_level = self.webview.get_zoom_level()
+        self.win_state = {
+            'height': win_size[1],
+            'width': win_size[0],
+            'pos_x': win_pos[0],
+            'pos_y': win_pos[1],
+            'zoom_level': zoom_level,
+        }
+
+    def ev_destroy(self, widget):
+        """
+        Window was destroyed. Call stop routine to save state and such.
+        """
+        self.stop()
+
+
+if __name__ == "__main__":
+    parser = optparse.OptionParser()
+    parser.set_usage(sys.argv[0] + " <file.md>")
+
+    #parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False, help="Be verbose (show lots of output)")
+    #parser.add_option("-l", "--log-stdout", dest="log_stdout", action="store_true", default=False, help="Also log to stdout")
+    #parser.add_option("-e", "--errors", dest="errors", action="store_true", default=False, help="Do not intercept errors.")
+    #parser.add_option("-f", "--foreground", dest="foreground", action="store_true", default=False, help="Do not go into daemon mode.")
+
+    (options, args) = parser.parse_args()
+    if len(args) < 1:
+        parser.print_usage()
+        sys.exit(1)
+
+    mbviewapp = MBViewApp(args[0])
+    mbviewapp.run()
