@@ -28,6 +28,7 @@ class MBViewApp:
     def __init__(self, md_file, conf_file='~/.mdview.conf'):
         self.md_file = md_file
         self.conf_file = conf_file
+        self.scroll_pos = None
 
         # Create default window state. Then override default window state with
         # configuration, if it exists.
@@ -51,6 +52,7 @@ class MBViewApp:
         ws.set_property('enable-plugins',False)
         self.webview.set_settings(ws)
         self.webview.set_zoom_level(self.win_state['zoom_level'])
+        self.webview.connect('notify::load-status', self.ev_load_status)
 
         self.scroll_window = gtk.ScrolledWindow(None, None)
         self.scroll_window.add(self.webview)
@@ -85,6 +87,7 @@ class MBViewApp:
         gtk.main_quit()
 
     def load_markdown(self, md_text):
+        self.scroll_pos = self.scroll_window.get_vadjustment().get_value()
         html = html_header + markdown.markdown(md_text)
         self.webview.load_html_string(html, 'file:///')
 
@@ -117,6 +120,21 @@ class MBViewApp:
             'pos_y': win_pos[1],
             'zoom_level': zoom_level,
         }
+
+    def ev_load_status(self, webview, load_status):
+        """
+        Handle events regarding load status:
+
+        - Set back the scroll position after a reload.
+        """
+        if (
+            self.scroll_pos is not None and
+            self.webview.get_load_status() == webkit.LOAD_FINISHED
+           ):
+            while gtk.events_pending():
+                gtk.main_iteration_do()
+            self.scroll_window.get_vadjustment().set_value(self.scroll_pos)
+            self.scroll_pos = None
 
     def ev_destroy(self, widget):
         """
