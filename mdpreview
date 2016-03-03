@@ -116,7 +116,7 @@ class MBViewApp:
         """
         Handle keypress events.
         """
-        if ev.keyval == gtk.keysyms.Escape:
+        if ev.keyval in (gtk.keysyms.Escape, gtk.keysyms.q):
             self.stop()
         elif ev.keyval in (gtk.keysyms.plus, gtk.keysyms.equal):
             self.webview.set_zoom_level(self.webview.get_zoom_level() + 0.2)
