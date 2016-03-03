@@ -80,6 +80,7 @@ Specify a full path to a theme:
 * **`Esc`**, **`q`**: Quit
 * **`j`**, **`k`**: Scroll down / up (vi keybindings)
 * **`G`**, **`g`**: Scroll to bottom / top (vi keybindings)
+* **`s`**: Save to HTML.
 
 ### Auto-reloading
 

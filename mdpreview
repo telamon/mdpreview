@@ -125,10 +125,30 @@ class MBViewApp:
         self.scroll_pos = vadj.value
         self.at_bottom = vadj.value == (vadj.upper - vadj.page_size)
 
+        md_html = self.markdown_to_html(md_text)
+        theme_contents = open(self.theme_path, 'r').read()
+        html = theme_contents.replace('{{{ contents }}}', md_html)
+        self.webview.load_html_string(html, 'file://' + self.md_file)
+
+    def save(self):
+        file_chooser = gtk.FileChooserDialog(
+            action=gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(
+                gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                gtk.STOCK_SAVE, gtk.RESPONSE_OK
+            ))
+        response = file_chooser.run()
+        if response == gtk.RESPONSE_OK:
+            md_text = file(self.md_file, 'r').read()
+            md_html = self.markdown_to_html(md_text)
+            open(file_chooser.get_filename(), 'w').write(md_html)
+        file_chooser.destroy()
+
+    def markdown_to_html(self, md_text):
         theme_contents = open(self.theme_path, 'r').read()
         md_html = markdown.markdown(md_text)
         html = theme_contents.replace('{{{ contents }}}', md_html)
-        self.webview.load_html_string(html, 'file://' + self.md_file)
+        return html
 
     def ev_key_press(self, widget, ev):
         """
@@ -159,6 +179,9 @@ class MBViewApp:
             # Scroll to top
             vadj = self.scroll_window.get_vadjustment()
             vadj.set_value(0)
+        elif ev.keyval == gtk.keysyms.s:
+            # Save document
+            self.save()
 
     def ev_resize(self, window, ev_reposition):
         """
