@@ -12,6 +12,7 @@ bottom of the document and automatically scroll down on new
 content, and more.
 
 ![](https://raw.githubusercontent.com/fboender/mdpreview/master/mdpreview.png)
+
 *Screenshot: mdpreview running the `solarized` theme.*
 
 Features
@@ -33,13 +34,13 @@ Requirements:
 
 * python-webkit
 * python-markdown
-* pyinotify (Optional, for fast auto-reloading)
+* pyinotify
 
 
 On Debian / Ubuntu systems, to install the dependencies (they're most probably
 already installed):
 
-    $ sudo apt-get install python-webkit python-markdown
+    $ sudo apt-get install python-webkit python-markdown python-pyinotify
 
 You can run `mdpreview` directly from the git repository:
 
