@@ -21,7 +21,9 @@ class MBViewApp:
         self.theme = theme
         self.auto_reload = auto_reload
         self.keep_on_top = keep_on_top
-        self.scroll_pos = None
+        self.did_reload = False # Set to True on reload
+        self.scroll_pos = None  # The scroll position before reload
+        self.at_bottom = False  # If we were at the bottom before reload
 
         # Get full path to theme
         if theme.startswith('/'):
@@ -79,7 +81,7 @@ class MBViewApp:
 
     def auto_reload_handler(self, event):
         if event.pathname == self.md_file:
-            self.load_markdown(file(self.md_file, 'r').read())
+            self.reload()
 
     def auto_reload_timer(self):
         self.notifier.process_events()
@@ -102,6 +104,7 @@ class MBViewApp:
         json.dump(self.win_state, file(os.path.expanduser('~/.mdview.conf'), 'w'))
 
     def reload(self):
+        self.did_reload = True
         self.load_markdown(file(self.md_file, 'r').read())
 
     def run(self):
@@ -112,7 +115,12 @@ class MBViewApp:
         gtk.main_quit()
 
     def load_markdown(self, md_text):
-        self.scroll_pos = self.scroll_window.get_vadjustment().get_value()
+        # Save some scrolling state information so we can reset it after
+        # reload.
+        vadj = self.scroll_window.get_vadjustment()
+        self.scroll_pos = vadj.value
+        self.at_bottom = vadj.value == (vadj.upper - vadj.page_size)
+
         theme_contents = open(self.theme_path, 'r').read()
         md_html = markdown.markdown(md_text)
         html = theme_contents.replace('{{{ contents }}}', md_html)
@@ -172,13 +180,20 @@ class MBViewApp:
         - Set back the scroll position after a reload.
         """
         if (
-            self.scroll_pos is not None and
+            self.did_reload and
             self.webview.get_load_status() == webkit.LOAD_FINISHED
            ):
             while gtk.events_pending():
                 gtk.main_iteration_do()
-            self.scroll_window.get_vadjustment().set_value(self.scroll_pos)
-            self.scroll_pos = None
+            vadj = self.scroll_window.get_vadjustment()
+            if not self.at_bottom:
+                # Scroll back to previous position
+                vadj.set_value(self.scroll_pos)
+            else:
+                # Previously at bottom, so scroll to bottom, to show any new
+                # content
+                vadj.set_value(vadj.upper - vadj.page_size)
+            self.did_reload = False
 
     def ev_destroy(self, widget):
         """

@@ -14,6 +14,8 @@ Features
 * Auto-reload that preserves scroll position.
 * Theme support (github, bitbucket, solarized, whiteonblack)
 * Vi motion keys (`j`, `k`, `G`, `g`)
+* Append detected. If the end of the document is being viewed and new contents
+  is appended, mdpreview automatically scrolls to the bottom.
 
 Installation
 ------------
