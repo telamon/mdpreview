@@ -124,7 +124,7 @@ class MBViewApp:
         theme_contents = open(self.theme_path, 'r').read()
         md_html = markdown.markdown(md_text)
         html = theme_contents.replace('{{{ contents }}}', md_html)
-        self.webview.load_html_string(html, 'file:///')
+        self.webview.load_html_string(html, 'file://' + self.md_file)
 
     def ev_key_press(self, widget, ev):
         """
