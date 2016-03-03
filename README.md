@@ -50,6 +50,16 @@ Basic usage:
       -t THEME, --theme=THEME
                             Theme (name or full path to .html). Default: github
 
+### Examples
+
+Using a theme:
+
+    mdpreview -t bitbucket ./README.md
+
+Specify a full path to a theme:
+
+    mdpreview -t ~/.mdpreview/mytheme.html ./README.md
+
 ### Keybindings
 
 * **`r`**: Reload
@@ -57,3 +67,7 @@ Basic usage:
 * **`j`**, **`k`**: Scroll down / up (vi keybindings)
 * **`G`**, **`g`**: Scroll to bottom / top (vi keybindings)
 
+### Auto-reloading
+
+mdpreview automatically reloads the Markdown file if it's been changed. It
+preserves the scrolling position during reloading.
