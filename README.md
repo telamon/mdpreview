@@ -4,12 +4,13 @@ mdpreview
 A simple GTK-based Markdown previewer, designed to be used with an external
 editor.
 
-There are many Markdown previewers. `mdpreview` has been written to be as easy
-to use with an external editor as possible. Just open `mdpreview`, open your
-editor and start editing. `mdpreview` will automatically
-reload when the file changes, detect when you're viewing the
-bottom of the document and automatically scroll down on new
-content, and more.
+There are many Markdown previewers. `mdpreview` has been written to be as **easy
+to use with an external editor** as possible. Just open `mdpreview`, open your
+editor and start editing. `mdpreview` will automatically reload when the file
+changes, detect when you're viewing the bottom of the document and
+automatically scroll down on new content, and more.
+
+It includes themes that **closely resemble *github*, and *bitbucket* **. 
 
 ![](https://raw.githubusercontent.com/fboender/mdpreview/master/mdpreview.png)
 
@@ -23,9 +24,9 @@ Features
 * Auto-reload that preserves scroll position.
 * Theme support (github, bitbucket, solarized, whiteonblack)
 * Vi motion keys (`j`, `k`, `G`, `g`)
-* Append detected. If the end of the document is being viewed and new contents
+* Append detection. If the end of the document is being viewed and new contents
   is appended, mdpreview automatically scrolls to the bottom.
-* Keep-on-top window hint, to keep the preview always on top.
+* Optional *Keep-on-top* window hint, to keep the preview always on top.
 
 Installation
 ------------
