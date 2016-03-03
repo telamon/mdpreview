@@ -2,6 +2,10 @@
 
 # TODO
 # - If scrolled to bottom and new stuff is appended, scroll down automatically dkfljd.
+# - Images are not reloaded.
+# - 's' saves document as is.
+# - Support back-nagivation after clicking a link.
+
 import sys
 import os
 import optparse
