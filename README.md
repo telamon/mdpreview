@@ -1,10 +1,17 @@
 mdpreview
 =========
 
-A simple GTK-based MarkDown previewer.
+A simple GTK-based Markdown previewer, designed to be used with an external
+editor.
 
+There are many Markdown previewers. `mdpreview` has been written to be as easy
+to use with an external editor as possible. Just open your editor and open
+`mdpreview` and start editing. `mdpreview` will automatically reload when the
+file changes, detect when you're viewing the bottom of the document and
+automatically scroll down on new content, and more.
 
-FIXME: Insert screenshot.
+![](mdpreview.png)
+
 
 Features
 --------
@@ -49,6 +56,7 @@ Basic usage:
 
     Options:
       -h, --help            show this help message and exit
+      -k, --keep-on-top     Keep window on top
       -t THEME, --theme=THEME
                             Theme (name or full path to .html). Default: github
 
