@@ -28,6 +28,11 @@ Features
   is appended, mdpreview automatically scrolls to the bottom.
 * Optional *Keep-on-top* window hint, to keep the preview always on top.
 
+### Todos
+
+* Images are not refreshed on reload.
+* Currently can't navigate back after clicking a link.
+
 Installation
 ------------
 
