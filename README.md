@@ -10,7 +10,8 @@ Features
 
 * Written in Python, so runs nearly everywhere.
 * Remembers window state between invocations.
-* Themes (Github)
+* Auto-reload that preserves scroll position.
+* Theme support (github, bitbucket, solarized, whiteonblack)
 
 Installation
 ------------

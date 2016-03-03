@@ -11,27 +11,24 @@ import markdown
 import pyinotify
 
 
-html_header = """<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <style>
-        body { margin: 20px; }
-        img { max-width: 100%; height: auto; }
-        pre { padding: 5px; background-color: #F0F0F0; }
-    </style>
-</head>
-<body>
-"""
-
-
-
 class MBViewApp:
-    def __init__(self, md_file, conf_file='~/.mdview.conf', auto_reload=True):
+    def __init__(self, md_file, conf_file='~/.mdview.conf', theme='github', auto_reload=True):
         self.md_file = os.path.realpath(md_file)
         self.conf_file = conf_file
+        self.theme = theme
         self.auto_reload = auto_reload
         self.scroll_pos = None
+
+        # Get full path to theme
+        if theme.startswith('/'):
+            self.theme_path = theme
+        else:
+            tpl_fname = self.theme + '.html'
+            tpl_dir = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'themes')
+            tpl_path = os.path.join(tpl_dir, tpl_fname)
+            self.theme_path = tpl_path
+        if not os.path.isfile(self.theme_path):
+            raise IOError("Not a valid theme file: '{}'".format(self.theme_path))
 
         # Create default window state. Then override default window state with
         # configuration, if it exists.
@@ -110,7 +107,9 @@ class MBViewApp:
 
     def load_markdown(self, md_text):
         self.scroll_pos = self.scroll_window.get_vadjustment().get_value()
-        html = html_header + markdown.markdown(md_text)
+        theme_contents = open(self.theme_path, 'r').read()
+        md_html = markdown.markdown(md_text)
+        html = theme_contents.replace('{{{ contents }}}', md_html)
         self.webview.load_html_string(html, 'file:///')
 
     def ev_key_press(self, widget, ev):
@@ -171,7 +170,7 @@ if __name__ == "__main__":
 
     #parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False, help="Be verbose (show lots of output)")
     #parser.add_option("-l", "--log-stdout", dest="log_stdout", action="store_true", default=False, help="Also log to stdout")
-    #parser.add_option("-e", "--errors", dest="errors", action="store_true", default=False, help="Do not intercept errors.")
+    parser.add_option("-t", "--theme", dest="theme", action="store", default='github', help="Theme (name or full path to .html). Default: github")
     #parser.add_option("-f", "--foreground", dest="foreground", action="store_true", default=False, help="Do not go into daemon mode.")
 
     (options, args) = parser.parse_args()
@@ -179,5 +178,5 @@ if __name__ == "__main__":
         parser.print_usage()
         sys.exit(1)
 
-    mbviewapp = MBViewApp(args[0])
+    mbviewapp = MBViewApp(args[0], theme=options.theme)
     mbviewapp.run()
