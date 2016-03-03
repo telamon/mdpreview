@@ -13,6 +13,7 @@ Features
 * Remembers window state between invocations.
 * Auto-reload that preserves scroll position.
 * Theme support (github, bitbucket, solarized, whiteonblack)
+* Vi motion keys (`j`, `k`, `G`, `g`)
 
 Installation
 ------------
@@ -48,3 +49,11 @@ Basic usage:
       -h, --help            show this help message and exit
       -t THEME, --theme=THEME
                             Theme (name or full path to .html). Default: github
+
+### Keybindings
+
+* **`r`**: Reload
+* **`Esc`**, **`q`**: Quit
+* **`j`**, **`k`**: Scroll down / up (vi keybindings)
+* **`G`**, **`g`**: Scroll to bottom / top (vi keybindings)
+
