@@ -11,7 +11,7 @@ reload when the file changes, detect when you're viewing the
 bottom of the document and automatically scroll down on new
 content, and more.
 
-![](mdpreview.png)
+![](https://raw.githubusercontent.com/fboender/mdpreview/master/mdpreview.png)
 *Screenshot: mdpreview running the `solarized` theme.*
 
 Features
