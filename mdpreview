@@ -126,9 +126,7 @@ class MBViewApp:
         self.at_bottom = vadj.value == (vadj.upper - vadj.page_size)
 
         md_html = self.markdown_to_html(md_text)
-        theme_contents = open(self.theme_path, 'r').read()
-        html = theme_contents.replace('{{{ contents }}}', md_html)
-        self.webview.load_html_string(html, 'file://' + self.md_file)
+        self.webview.load_html_string(md_html, 'file://' + self.md_file)
 
     def save(self):
         file_chooser = gtk.FileChooserDialog(
