@@ -40,7 +40,7 @@ class MBViewApp:
         # configuration, if it exists.
         self.win_state = {
             'height': 700,
-            'width': 900,
+            'width': 668,
             'pos_x': 100,
             'pos_y': 100,
             'zoom_level': 1,
