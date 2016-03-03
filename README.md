@@ -1,7 +1,8 @@
 mdpreview
 =========
 
-Simple GTK-based MarkDown previewer.
+A simple GTK-based MarkDown previewer.
+
 
 FIXME: Insert screenshot.
 
@@ -20,7 +21,7 @@ Requirements:
 
 * python-webkit
 * python-markdown
-* pyinotify (Optional, for fast autoreloading)
+* pyinotify (Optional, for fast auto-reloading)
 
 
 On Debian / Ubuntu systems, to install the dependencies (they're most probably
@@ -41,5 +42,9 @@ Usage
 
 Basic usage:
 
-    mdpreview [--theme THEME] [--no-auto] <markdown_file.md>
+    Usage: ./mdpreview <file.md>
 
+    Options:
+      -h, --help            show this help message and exit
+      -t THEME, --theme=THEME
+                            Theme (name or full path to .html). Default: github
