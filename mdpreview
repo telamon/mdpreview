@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# TODO
+# - If scrolled to bottom and new stuff is appended, scroll down automatically dkfljd.
 import sys
 import os
 import optparse
