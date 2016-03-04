@@ -31,7 +31,9 @@ Features
 ### Todos
 
 * Images are not refreshed on reload.
-* Currently can't navigate back after clicking a link.
+* Currently can't navigate back after clicking a link. (Press `r` to return to
+  your original document).
+
 
 Installation
 ------------
@@ -50,11 +52,15 @@ already installed):
 
 You can run `mdpreview` directly from the git repository:
 
-    $ git clone https://github.com/fboender/mdpreview
+    $ git clone https://github.com/fboender/mdpreview.git
     $ cd mdpreview
     $ ./mdpreview README.md
 
-If you wish to install it on your system, run the `install.sh` script.
+If you wish to install it on your system, run the `install.sh` script:
+
+    $ sudo install.sh
+
+This will also put an `uninstall.sh` script in `/usr/local/lib/mdpreview/uninstall.sh`.
 
 Usage
 -----
