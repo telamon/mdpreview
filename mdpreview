@@ -77,7 +77,7 @@ class MBViewApp:
         if self.auto_reload:
             self.wm = pyinotify.WatchManager()
             mask = pyinotify.IN_MODIFY
-            self.wm.add_watch(os.path.dirname(self.md_file), mask, rec=True) # FIXME: PATH
+            self.wm.add_watch(os.path.dirname(self.md_file), mask)
             self.notifier = pyinotify.Notifier(self.wm, self.auto_reload_handler, timeout=10)
             gobject.timeout_add(200, self.auto_reload_timer)
 
