@@ -240,5 +240,12 @@ if __name__ == "__main__":
         parser.print_usage()
         sys.exit(1)
 
+    try:
+        with open(args[0], 'r') as test_open:
+            pass
+    except IOError as err:
+        sys.stderr.write("{}\n".format(err))
+        sys.exit(1)
+
     mbviewapp = MBViewApp(args[0], theme=options.theme, keep_on_top=options.keep_on_top)
     mbviewapp.run()
