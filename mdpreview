@@ -2,7 +2,6 @@
 
 # TODO
 # - Images are not reloaded.
-# - Support back-nagivation after clicking a link.
 
 import sys
 import os
@@ -15,10 +14,25 @@ import markdown
 import pyinotify
 
 
+toolbar_items = (
+    (gtk.STOCK_GO_BACK, "Back", "back", None, 0),
+    (gtk.STOCK_REFRESH, "Reload", "reload", None, 1),
+    (gtk.STOCK_SAVE, "Save", "save", None, 2),
+    (gtk.STOCK_CLOSE, "Close",  "stop", None, 3),
+)
+
+theme_items = (
+    ('Github', 'github'),
+    ('Bitbucket', 'bitbucket'),
+    ('Solarized', 'solarized'),
+    ('White on black', 'whiteonblack'),
+)
+
 class MBViewApp:
-    def __init__(self, md_file, conf_file='~/.mdview.conf', theme='github',
+    def __init__(self, md_file, theme_dir, conf_file='~/.mdview.conf', theme='github',
                 auto_reload=True, keep_on_top=False):
         self.md_file = os.path.realpath(md_file)
+        self.theme_dir = theme_dir
         self.conf_file = conf_file
         self.theme = theme
         self.auto_reload = auto_reload
@@ -27,16 +41,7 @@ class MBViewApp:
         self.scroll_pos = None  # The scroll position before reload
         self.at_bottom = False  # If we were at the bottom before reload
 
-        # Get full path to theme
-        if theme.startswith('/'):
-            self.theme_path = theme
-        else:
-            tpl_fname = self.theme + '.html'
-            tpl_dir = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'themes')
-            tpl_path = os.path.join(tpl_dir, tpl_fname)
-            self.theme_path = tpl_path
-        if not os.path.isfile(self.theme_path):
-            raise IOError("Not a valid theme file: '{}'".format(self.theme_path))
+        self.set_theme(theme)
 
         # Create default window state. Then override default window state with
         # configuration, if it exists.
@@ -62,12 +67,40 @@ class MBViewApp:
         ws.set_property('enable-plugins',False)
         self.webview.set_settings(ws)
         self.webview.set_zoom_level(self.win_state['zoom_level'])
+        self.webview.set_maintains_back_forward_list(True)
         self.webview.connect('notify::load-status', self.ev_load_status)
-
         self.scroll_window = gtk.ScrolledWindow(None, None)
         self.scroll_window.add(self.webview)
 
-        self.win_main.add(self.scroll_window)
+        self.toolbar = gtk.Toolbar()
+        self.toolbar.set_orientation(gtk.ORIENTATION_HORIZONTAL)
+        self.toolbar.set_style(gtk.TOOLBAR_BOTH_HORIZ)
+        #self.toolbar.set_style(gtk.TOOLBAR_BOTH)
+        for toolbar_item in toolbar_items:
+            stock_item, tooltip, callback, user_data, pos = toolbar_item
+            callback_method = getattr(self, callback)
+            button = gtk.ToolButton(stock_item)
+            button.set_tooltip_text(tooltip)
+            button.connect('clicked', callback_method)
+            button.set_is_important(True)
+            self.toolbar.insert(button, pos)
+
+        menu = gtk.Menu()
+        for theme_item in theme_items:
+            menu_item = gtk.MenuItem(theme_item[0])
+            menu_item.connect('activate', self.ev_tb_theme, theme_item[1])
+            menu.append(menu_item)
+            menu_item.show()
+        toolbar_theme_menu = gtk.MenuToolButton(gtk.STOCK_PROPERTIES)
+        toolbar_theme_menu.set_tooltip_text('Themes')
+        toolbar_theme_menu.set_menu(menu)
+        self.toolbar.insert(toolbar_theme_menu, 4)
+
+        vbox = gtk.VBox()
+        vbox.pack_start(self.toolbar, expand=False)
+        vbox.pack_start(self.scroll_window, expand=True, fill=True)
+
+        self.win_main.add(vbox)
         self.win_main.show_all()
         self.win_main.move(self.win_state['pos_x'], self.win_state['pos_y'])
 
@@ -80,6 +113,20 @@ class MBViewApp:
             self.wm.add_watch(os.path.dirname(self.md_file), mask)
             self.notifier = pyinotify.Notifier(self.wm, self.auto_reload_handler, timeout=10)
             gobject.timeout_add(200, self.auto_reload_timer)
+
+    def set_theme(self, theme):
+        if os.path.isfile(theme):
+            theme_path = theme
+        else:
+            theme_fname = theme + '.html'
+            theme_path = os.path.join(self.theme_dir, theme_fname)
+        if not os.path.isfile(theme_path):
+            raise IOError("Not a valid theme file: '{}'".format(theme_path))
+        self.theme_path = theme_path
+
+    def ev_tb_theme(self, button, theme):
+        self.set_theme(theme)
+        self.reload()
 
     def auto_reload_handler(self, event):
         if event.pathname == self.md_file:
@@ -105,14 +152,22 @@ class MBViewApp:
     def save_win_state(self):
         json.dump(self.win_state, file(os.path.expanduser('~/.mdview.conf'), 'w'))
 
-    def reload(self):
+    def back(self, toolbar_item=None):
+        if self.webview.can_go_back():
+            self.webview.go_back()
+        else:
+            # Since we loud the Markdown preview using load_html_string(),
+            # there is no page to go back to, se we reload instead.
+            self.reload()
+
+    def reload(self, toolbar_item=None):
         self.did_reload = True
         self.load_markdown(file(self.md_file, 'r').read())
 
     def run(self):
         gtk.main()
 
-    def stop(self):
+    def stop(self, toolbar_item=None):
         self.save_win_state()
         gtk.main_quit()
 
@@ -126,7 +181,7 @@ class MBViewApp:
         md_html = self.markdown_to_html(md_text)
         self.webview.load_html_string(md_html, 'file://' + self.md_file)
 
-    def save(self):
+    def save(self, toolbar_item=None):
         file_chooser = gtk.FileChooserDialog(
             action=gtk.FILE_CHOOSER_ACTION_SAVE,
             buttons=(
@@ -229,11 +284,8 @@ if __name__ == "__main__":
     parser = optparse.OptionParser()
     parser.set_usage(sys.argv[0] + " <file.md>")
 
-    #parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False, help="Be verbose (show lots of output)")
-    #parser.add_option("-l", "--log-stdout", dest="log_stdout", action="store_true", default=False, help="Also log to stdout")
     parser.add_option("-k", "--keep-on-top", dest="keep_on_top", action="store_true", default=False, help="Keep window on top")
     parser.add_option("-t", "--theme", dest="theme", action="store", default='github', help="Theme (name or full path to .html). Default: github")
-    #parser.add_option("-f", "--foreground", dest="foreground", action="store_true", default=False, help="Do not go into daemon mode.")
 
     (options, args) = parser.parse_args()
     if len(args) < 1:
@@ -247,5 +299,7 @@ if __name__ == "__main__":
         sys.stderr.write("{}\n".format(err))
         sys.exit(1)
 
-    mbviewapp = MBViewApp(args[0], theme=options.theme, keep_on_top=options.keep_on_top)
+    theme_dir = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'themes')
+    mbviewapp = MBViewApp(args[0], theme_dir=theme_dir, theme=options.theme,
+                          keep_on_top=options.keep_on_top)
     mbviewapp.run()
