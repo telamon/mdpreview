@@ -81,6 +81,12 @@ class MDRenderer:
         """
         return self.theme_path
 
+    def get_md_path(self):
+        """
+        Return the full path to the current markdown file being used.
+        """
+        return self.md_path
+
     def render(self):
         """
         Render the contents of `self.md_file` according to `self.theme_path`.
@@ -229,6 +235,21 @@ class GUI:
         """
         json.dump(self.config, file(os.path.expanduser('~/.mdview.conf'), 'w'))
 
+    def load_markdown(self):
+        """
+        Load markdown into the webview. Saves the scrolling position and
+        restores it after loading.
+        """
+        # Save some scrolling state information so we can reset it after
+        # reload.
+        vadj = self.scroll_window.get_vadjustment()
+        self.scroll_pos = vadj.value
+        self.at_bottom = vadj.value == (vadj.upper - vadj.page_size)
+
+        md_html = self.mdrenderer.render()
+        md_path = self.mdrenderer.get_md_path()
+        self.webview.load_html_string(md_html, 'file://' + md_path)
+
     def auto_reload_timer(self):
         """
         Periodically check for inotify events.
@@ -254,22 +275,7 @@ class GUI:
         self.did_reload = True
         self.load_markdown()
 
-    def load_markdown(self):
-        """
-        Load markdown into the webview. Saves the scrolling position and
-        restores it after loading.
-        """
-        # Save some scrolling state information so we can reset it after
-        # reload.
-        vadj = self.scroll_window.get_vadjustment()
-        self.scroll_pos = vadj.value
-        self.at_bottom = vadj.value == (vadj.upper - vadj.page_size)
-
-        md_html = self.mdrenderer.render()
-        theme_path = self.mdrenderer.get_theme_path()
-        self.webview.load_html_string(md_html, 'file://' + theme_path)
-
-    def save(self, toolbar_item=None):
+    def do_save(self, toolbar_item=None):
         """
         Save rendered markdown to a file.
         """
@@ -312,7 +318,7 @@ class GUI:
         elif ev.keyval == gtk.keysyms.minus:
             self.webview.set_zoom_level(self.webview.get_zoom_level() - 0.2)
         elif ev.keyval == gtk.keysyms.r:
-            self.reload()
+            self.do_reload()
         elif ev.keyval == gtk.keysyms.j:
             # Scroll down
             vadj = self.scroll_window.get_vadjustment()
@@ -332,7 +338,7 @@ class GUI:
             vadj.set_value(0)
         elif ev.keyval == gtk.keysyms.s:
             # Save document
-            self.save()
+            self.do_save()
 
     def ev_configure_event(self, window, ev_reposition):
         """
