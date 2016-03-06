@@ -14,6 +14,9 @@ import markdown
 import pyinotify
 
 
+# Toolbar items:
+#    (stock_id, label/tooltip, callback_name, private_label, position)
+#  callback_name will be mapped to GUI.ev_tb_XXX methods
 toolbar_items = (
     (gtk.STOCK_GO_BACK, "Back", "back", None, 0),
     (gtk.STOCK_REFRESH, "Reload", "reload", None, 1),
@@ -28,36 +31,121 @@ theme_items = (
     ('White on black', 'whiteonblack'),
 )
 
-class MBViewApp:
-    def __init__(self, md_file, theme_dir, conf_file='~/.mdview.conf', theme='github',
-                auto_reload=True, keep_on_top=False):
-        self.md_file = os.path.realpath(md_file)
+class MDRenderer:
+    """
+    Render Markdown to HTML according to a theme. Also watches the given
+    markdown file for changes if `auto_reload` is True.
+    """
+    def __init__(self, md_file, theme_dir, theme="github", auto_reload=True):
         self.theme_dir = theme_dir
-        self.conf_file = conf_file
         self.theme = theme
+        self.auto_reload = auto_reload
+        self.watch_notify_callbacks = []
+
+        # Set theme properties
+        self.set_theme(theme)  # Sets self.theme_path
+
+        # Set mardown file
+        md_path = os.path.realpath(md_file)
+        with open(md_path, 'r') as md_fh:  # Trigger IOErrors
+            pass
+        self.md_file = md_file
+        self.md_path = md_path
+
+        if self.auto_reload:
+            self.watchmanager = pyinotify.WatchManager()
+            mask = pyinotify.IN_MODIFY
+            self.watchmanager.add_watch(os.path.dirname(self.md_path), mask)
+            self.notifier = pyinotify.Notifier(self.watchmanager,
+                                               self._watch_notifier,
+                                               timeout=10)
+
+    def set_theme(self, theme):
+        """
+        Set the theme to use. `theme` is either a path to an existing file, or
+        the name of a theme. If `theme` is not a path to an existing file, the
+        theme will be looked up in `self.theme_dir`.
+        """
+        if os.path.isfile(theme):
+            theme_path = theme
+        else:
+            theme_fname = theme + '.html'
+            theme_path = os.path.join(self.theme_dir, theme_fname)
+        if not os.path.isfile(theme_path):
+            raise IOError("Not a valid theme file: '{}'".format(theme_path))
+        self.theme_path = theme_path
+
+    def get_theme_path(self):
+        """
+        Return the full path to the current theme being used.
+        """
+        return self.theme_path
+
+    def render(self):
+        """
+        Render the contents of `self.md_file` according to `self.theme_path`.
+        """
+        theme_contents = open(self.theme_path, 'r').read()
+        md_contents = open(self.md_file, 'r').read()
+        md_html = markdown.markdown(md_contents)
+        html = theme_contents.replace('{{{ contents }}}', md_html)
+        return html
+
+    def add_watch_notify_callback(self, cb):
+        """
+        Add a callback to be called when the contents of `self.md_path` changes
+        (if `self.auto_reload` is True).
+        """
+        self.watch_notify_callbacks.append(cb)
+
+    def watch_update(self):
+        """
+        Method to synchroniously update inotify events.
+        """
+        if self.auto_reload:
+            self.notifier.process_events()
+            while self.notifier.check_events():  #loop in case more events appear while we are processing
+                self.notifier.read_events()
+                self.notifier.process_events()
+
+    def _watch_notifier(self, event):
+        """
+        inotify callback handler
+        """
+        if event.pathname == self.md_path:
+            for watch_notify_callback in self.watch_notify_callbacks:
+                watch_notify_callback()
+
+
+class GUI:
+    """
+    mdpreview GUI.
+    """
+    def __init__(self, mdrenderer, conf_file='~/.mdview.conf',
+                 auto_reload=True, keep_on_top=False):
+        self.mdrenderer = mdrenderer
+        self.conf_file = conf_file
         self.auto_reload = auto_reload
         self.keep_on_top = keep_on_top
         self.did_reload = False # Set to True on reload
         self.scroll_pos = None  # The scroll position before reload
         self.at_bottom = False  # If we were at the bottom before reload
 
-        self.set_theme(theme)
-
         # Create default window state. Then override default window state with
         # configuration, if it exists.
-        self.win_state = {
+        self.config = {
             'height': 700,
             'width': 668,
             'pos_x': 100,
             'pos_y': 100,
             'zoom_level': 1,
         }
-        self.load_win_state()
+        self.load_config()
 
         self.win_main = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.win_main.resize(self.win_state['width'], self.win_state['height'])
+        self.win_main.resize(self.config['width'], self.config['height'])
         self.win_main.connect("destroy", self.ev_destroy)
-        self.win_main.connect("configure-event", self.ev_resize)
+        self.win_main.connect("configure-event", self.ev_configure_event)
         self.win_main.connect("key-press-event", self.ev_key_press)
         if self.keep_on_top:
             self.win_main.set_keep_above(True)
@@ -66,7 +154,7 @@ class MBViewApp:
         ws = self.webview.get_settings()
         ws.set_property('enable-plugins',False)
         self.webview.set_settings(ws)
-        self.webview.set_zoom_level(self.win_state['zoom_level'])
+        self.webview.set_zoom_level(self.config['zoom_level'])
         self.webview.set_maintains_back_forward_list(True)
         self.webview.connect('notify::load-status', self.ev_load_status)
         self.scroll_window = gtk.ScrolledWindow(None, None)
@@ -75,10 +163,9 @@ class MBViewApp:
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_orientation(gtk.ORIENTATION_HORIZONTAL)
         self.toolbar.set_style(gtk.TOOLBAR_BOTH_HORIZ)
-        #self.toolbar.set_style(gtk.TOOLBAR_BOTH)
         for toolbar_item in toolbar_items:
             stock_item, tooltip, callback, user_data, pos = toolbar_item
-            callback_method = getattr(self, callback)
+            callback_method = getattr(self, 'ev_tb_' + callback)
             button = gtk.ToolButton(stock_item)
             button.set_tooltip_text(tooltip)
             button.connect('clicked', callback_method)
@@ -102,86 +189,90 @@ class MBViewApp:
 
         self.win_main.add(vbox)
         self.win_main.show_all()
-        self.win_main.move(self.win_state['pos_x'], self.win_state['pos_y'])
+        self.win_main.move(self.config['pos_x'], self.config['pos_y'])
 
-        self.load_markdown(file(self.md_file, 'r').read())
+        self.load_markdown()
 
-        # Setup the inotify watcher
-        if self.auto_reload:
-            self.wm = pyinotify.WatchManager()
-            mask = pyinotify.IN_MODIFY
-            self.wm.add_watch(os.path.dirname(self.md_file), mask)
-            self.notifier = pyinotify.Notifier(self.wm, self.auto_reload_handler, timeout=10)
-            gobject.timeout_add(200, self.auto_reload_timer)
+        # Periodically trigger inotify events
+        self.mdrenderer.add_watch_notify_callback(self.do_reload)
+        gobject.timeout_add(200, self.auto_reload_timer)
 
-    def set_theme(self, theme):
-        if os.path.isfile(theme):
-            theme_path = theme
-        else:
-            theme_fname = theme + '.html'
-            theme_path = os.path.join(self.theme_dir, theme_fname)
-        if not os.path.isfile(theme_path):
-            raise IOError("Not a valid theme file: '{}'".format(theme_path))
-        self.theme_path = theme_path
+    def run(self):
+        """
+        Start the GUI
+        """
+        gtk.main()
 
-    def ev_tb_theme(self, button, theme):
-        self.set_theme(theme)
-        self.reload()
+    def stop(self, toolbar_item=None):
+        """
+        Save the configuration and stop the GUI
+        """
+        self.save_config()
+        gtk.main_quit()
 
-    def auto_reload_handler(self, event):
-        if event.pathname == self.md_file:
-            self.reload()
-
-    def auto_reload_timer(self):
-        self.notifier.process_events()
-        while self.notifier.check_events():  #loop in case more events appear while we are processing
-            self.notifier.read_events()
-            self.notifier.process_events()
-        return True
-
-    def load_win_state(self):
+    def load_config(self):
+        """
+        Load config with window position, etc from disk.
+        """
         try:
             with open(os.path.expanduser(self.conf_file), 'r') as f:
-                self.win_state.update(json.load(f))
+                self.config.update(json.load(f))
         except IOError as err:
             if err.errno == 2:
                 pass
             else:
                 raise
 
-    def save_win_state(self):
-        json.dump(self.win_state, file(os.path.expanduser('~/.mdview.conf'), 'w'))
+    def save_config(self):
+        """
+        Save config with window position, etc to disk.
+        """
+        json.dump(self.config, file(os.path.expanduser('~/.mdview.conf'), 'w'))
 
-    def back(self, toolbar_item=None):
+    def auto_reload_timer(self):
+        """
+        Periodically check for inotify events.
+        """
+        self.mdrenderer.watch_update()
+        return True
+
+    def do_back(self, toolbar_item=None):
+        """
+        Go back in the browser history.
+        """
         if self.webview.can_go_back():
             self.webview.go_back()
         else:
             # Since we loud the Markdown preview using load_html_string(),
             # there is no page to go back to, se we reload instead.
-            self.reload()
+            self.do_reload()
 
-    def reload(self, toolbar_item=None):
+    def do_reload(self, toolbar_item=None):
+        """
+        Reload the markdown
+        """
         self.did_reload = True
-        self.load_markdown(file(self.md_file, 'r').read())
+        self.load_markdown()
 
-    def run(self):
-        gtk.main()
-
-    def stop(self, toolbar_item=None):
-        self.save_win_state()
-        gtk.main_quit()
-
-    def load_markdown(self, md_text):
+    def load_markdown(self):
+        """
+        Load markdown into the webview. Saves the scrolling position and
+        restores it after loading.
+        """
         # Save some scrolling state information so we can reset it after
         # reload.
         vadj = self.scroll_window.get_vadjustment()
         self.scroll_pos = vadj.value
         self.at_bottom = vadj.value == (vadj.upper - vadj.page_size)
 
-        md_html = self.markdown_to_html(md_text)
-        self.webview.load_html_string(md_html, 'file://' + self.md_file)
+        md_html = self.mdrenderer.render()
+        theme_path = self.mdrenderer.get_theme_path()
+        self.webview.load_html_string(md_html, 'file://' + theme_path)
 
     def save(self, toolbar_item=None):
+        """
+        Save rendered markdown to a file.
+        """
         file_chooser = gtk.FileChooserDialog(
             action=gtk.FILE_CHOOSER_ACTION_SAVE,
             buttons=(
@@ -190,16 +281,25 @@ class MBViewApp:
             ))
         response = file_chooser.run()
         if response == gtk.RESPONSE_OK:
-            md_text = file(self.md_file, 'r').read()
-            md_html = self.markdown_to_html(md_text)
+            md_html = self.mdrenderer.render()
             open(file_chooser.get_filename(), 'w').write(md_html)
         file_chooser.destroy()
 
-    def markdown_to_html(self, md_text):
-        theme_contents = open(self.theme_path, 'r').read()
-        md_html = markdown.markdown(md_text)
-        html = theme_contents.replace('{{{ contents }}}', md_html)
-        return html
+    def ev_tb_back(self, button):
+        self.do_back()
+
+    def ev_tb_reload(self, button):
+        self.do_reload()
+
+    def ev_tb_save(self, button):
+        self.do_save()
+
+    def ev_tb_stop(self, button):
+        self.do_stop()
+
+    def ev_tb_theme(self, button, theme):
+        self.mdrenderer.set_theme(theme)
+        self.do_reload()
 
     def ev_key_press(self, widget, ev):
         """
@@ -234,7 +334,7 @@ class MBViewApp:
             # Save document
             self.save()
 
-    def ev_resize(self, window, ev_reposition):
+    def ev_configure_event(self, window, ev_reposition):
         """
         Save window position and size on resize and move. We can then save it
         later when the application quits, even after the 'destroy' event has
@@ -243,13 +343,13 @@ class MBViewApp:
         win_size = self.win_main.get_size()
         win_pos = self.win_main.get_position()
         zoom_level = self.webview.get_zoom_level()
-        self.win_state = {
+        self.config.update({
             'height': win_size[1],
             'width': win_size[0],
             'pos_x': win_pos[0],
             'pos_y': win_pos[1],
             'zoom_level': zoom_level,
-        }
+        })
 
     def ev_load_status(self, webview, load_status):
         """
@@ -300,6 +400,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     theme_dir = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'themes')
-    mbviewapp = MBViewApp(args[0], theme_dir=theme_dir, theme=options.theme,
-                          keep_on_top=options.keep_on_top)
-    mbviewapp.run()
+    mdrenderer = MDRenderer(args[0], theme_dir=theme_dir, theme=options.theme)
+    gui = GUI(mdrenderer, keep_on_top=options.keep_on_top)
+    gui.run()
