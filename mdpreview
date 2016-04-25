@@ -387,7 +387,7 @@ class GUI:
 
 
 if __name__ == "__main__":
-    parser = optparse.OptionParser()
+    parser = optparse.OptionParser(version="%prog v%%MASTER%%")
     parser.set_usage(sys.argv[0] + " <file.md>")
 
     parser.add_option("-k", "--keep-on-top", dest="keep_on_top", action="store_true", default=False, help="Keep window on top")
