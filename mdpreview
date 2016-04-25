@@ -209,13 +209,6 @@ class GUI:
         """
         gtk.main()
 
-    def stop(self, toolbar_item=None):
-        """
-        Save the configuration and stop the GUI
-        """
-        self.save_config()
-        gtk.main_quit()
-
     def load_config(self):
         """
         Load config with window position, etc from disk.
@@ -256,6 +249,13 @@ class GUI:
         """
         self.mdrenderer.watch_update()
         return True
+
+    def do_stop(self, toolbar_item=None):
+        """
+        Save the configuration and stop the GUI
+        """
+        self.save_config()
+        gtk.main_quit()
 
     def do_back(self, toolbar_item=None):
         """
@@ -312,7 +312,7 @@ class GUI:
         Handle keypress events.
         """
         if ev.keyval in (gtk.keysyms.Escape, gtk.keysyms.q):
-            self.stop()
+            self.do_stop()
         elif ev.keyval in (gtk.keysyms.plus, gtk.keysyms.equal):
             self.webview.set_zoom_level(self.webview.get_zoom_level() + 0.2)
         elif ev.keyval == gtk.keysyms.minus:
@@ -383,7 +383,7 @@ class GUI:
         """
         Window was destroyed. Call stop routine to save state and such.
         """
-        self.stop()
+        self.do_stop()
 
 
 if __name__ == "__main__":
