@@ -148,6 +148,7 @@ class GUI:
         }
         self.load_config()
 
+        # Construct the main window with some basic event handlers
         self.win_main = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.win_main.resize(self.config['width'], self.config['height'])
         self.win_main.connect("destroy", self.ev_destroy)
@@ -156,6 +157,7 @@ class GUI:
         if self.keep_on_top:
             self.win_main.set_keep_above(True)
 
+        # Construct the webkit HTML view
         self.webview = webkit.WebView()
         ws = self.webview.get_settings()
         ws.set_property('enable-plugins',False)
@@ -166,6 +168,7 @@ class GUI:
         self.scroll_window = gtk.ScrolledWindow(None, None)
         self.scroll_window.add(self.webview)
 
+        # Put together the toolbar from the `toolbar_items`.
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_orientation(gtk.ORIENTATION_HORIZONTAL)
         self.toolbar.set_style(gtk.TOOLBAR_BOTH_HORIZ)
@@ -178,6 +181,7 @@ class GUI:
             button.set_is_important(True)
             self.toolbar.insert(button, pos)
 
+        # Add a template selection dropdown to the toolbar
         menu = gtk.Menu()
         for theme_item in theme_items:
             menu_item = gtk.MenuItem(theme_item[0])
@@ -189,6 +193,7 @@ class GUI:
         toolbar_theme_menu.set_menu(menu)
         self.toolbar.insert(toolbar_theme_menu, 4)
 
+        # Pick it, pack it, fire it up, come along...
         vbox = gtk.VBox()
         vbox.pack_start(self.toolbar, expand=False)
         vbox.pack_start(self.scroll_window, expand=True, fill=True)
