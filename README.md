@@ -31,8 +31,6 @@ Features
 ### Todos
 
 * Images are not refreshed on reload.
-* Currently can't navigate back after clicking a link. (Press `r` to return to
-  your original document).
 
 
 Installation
