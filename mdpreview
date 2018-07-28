@@ -232,7 +232,9 @@ class GUI:
         """
         Save config with window position, etc to disk.
         """
-        json.dump(self.config, file(os.path.expanduser('~/.mdview.conf'), 'w'))
+        config_path = os.path.expanduser('~/.mdview.conf')
+        with open(config_path, 'w') as f:
+            json.dump(self.config, f)
 
     def load_markdown(self):
         """
