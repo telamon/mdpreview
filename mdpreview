@@ -250,7 +250,7 @@ class GUI:
 
         md_html = self.mdrenderer.render()
         md_path = self.mdrenderer.get_md_path()
-        self.webview.load_html_string(md_html, 'file://' + md_path)
+        self.webview.load_string(md_html, "text/html", "utf-8", 'file://' + md_path)
 
     def auto_reload_timer(self):
         """
