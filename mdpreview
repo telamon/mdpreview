@@ -20,7 +20,7 @@ import pyinotify
 toolbar_items = (
     (gtk.STOCK_GO_BACK, "Back", "back", None, 0),
     (gtk.STOCK_REFRESH, "Reload", "reload", None, 1),
-    (gtk.STOCK_SAVE, "Save", "save", None, 2),
+    (gtk.STOCK_SAVE, "Save HTML", "save_html", None, 2),
     (gtk.STOCK_CLOSE, "Close",  "stop", None, 3),
 )
 
@@ -173,10 +173,10 @@ class GUI:
         self.toolbar.set_orientation(gtk.ORIENTATION_HORIZONTAL)
         self.toolbar.set_style(gtk.TOOLBAR_BOTH_HORIZ)
         for toolbar_item in toolbar_items:
-            stock_item, tooltip, callback, user_data, pos = toolbar_item
+            stock_item, label, callback, user_data, pos = toolbar_item
             callback_method = getattr(self, 'ev_tb_' + callback)
             button = gtk.ToolButton(stock_item)
-            button.set_tooltip_text(tooltip)
+            button.set_label(label)
             button.connect('clicked', callback_method)
             button.set_is_important(True)
             self.toolbar.insert(button, pos)
@@ -188,7 +188,8 @@ class GUI:
             menu_item.connect('activate', self.ev_tb_theme, theme_item[1])
             menu.append(menu_item)
             menu_item.show()
-        toolbar_theme_menu = gtk.MenuToolButton(gtk.STOCK_PROPERTIES)
+        toolbar_theme_menu = gtk.MenuToolButton(None, "Theme")
+        toolbar_theme_menu.set_is_important(True)
         toolbar_theme_menu.set_tooltip_text('Themes')
         toolbar_theme_menu.set_menu(menu)
         self.toolbar.insert(toolbar_theme_menu, 4)
@@ -280,7 +281,7 @@ class GUI:
         self.did_reload = True
         self.load_markdown()
 
-    def do_save(self, toolbar_item=None):
+    def do_save_html(self, toolbar_item=None):
         """
         Save rendered markdown to a file.
         """
@@ -302,8 +303,8 @@ class GUI:
     def ev_tb_reload(self, button):
         self.do_reload()
 
-    def ev_tb_save(self, button):
-        self.do_save()
+    def ev_tb_save_html(self, button):
+        self.do_save_html()
 
     def ev_tb_stop(self, button):
         self.do_stop()
