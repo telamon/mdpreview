@@ -160,7 +160,7 @@ class GUI:
         # Construct the webkit HTML view
         self.webview = webkit.WebView()
         ws = self.webview.get_settings()
-        ws.set_property('enable-plugins',False)
+        ws.set_property('enable-plugins', False)
         self.webview.set_settings(ws)
         self.webview.set_zoom_level(self.config['zoom_level'])
         self.webview.set_maintains_back_forward_list(True)
