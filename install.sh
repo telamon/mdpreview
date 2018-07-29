@@ -5,6 +5,7 @@
 mkdir -p $INSTALL_PATH/lib/mdpreview
 mkdir -p $INSTALL_PATH/bin
 cp mdpreview $INSTALL_PATH/lib/mdpreview
+cp mdpreview_icon.png $INSTALL_PATH/lib/mdpreview
 cp -ar themes $INSTALL_PATH/lib/mdpreview
 ln -s $INSTALL_PATH/lib/mdpreview/mdpreview $INSTALL_PATH/bin
 

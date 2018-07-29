@@ -211,6 +211,11 @@ class GUI:
 
     def make_win_main(self, width, height, keep_on_top, pos_x, pos_y):
         win_main = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        icon_path = os.path.join(
+            os.path.dirname(os.path.realpath(sys.argv[0])),
+            'mdpreview_icon.png'
+        )
+        win_main.set_icon_from_file(icon_path)
         win_main.resize(width, height)
         win_main.set_keep_above(keep_on_top)
         win_main.move(pos_x, pos_y)
