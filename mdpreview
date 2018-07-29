@@ -31,6 +31,39 @@ theme_items = (
     ('White on black', 'whiteonblack'),
 )
 
+class Config:
+    def __init__(self, conf_file):
+        self.conf_file = conf_file
+        # Default config
+        self.config = {
+            'height': 700,
+            'width': 668,
+            'pos_x': 100,
+            'pos_y': 100,
+            'zoom_level': 1,
+        }
+        self.load()
+
+    def load(self):
+        try:
+            with open(self.conf_file, 'r') as f:
+                self.config.update(json.load(f))
+        except IOError as err:
+            if err.errno == 2:
+                pass
+            else:
+                raise
+
+    def save(self):
+        with open(self.conf_file, 'w') as f:
+            json.dump(self.config, f)
+
+    def get(self, key):
+        return self.config[key]
+
+    def set(self, key, value):
+        self.config[key] = value
+
 class MDRenderer:
     """
     Render Markdown to HTML according to a theme. Also watches the given
@@ -127,32 +160,29 @@ class GUI:
     """
     mdpreview GUI.
     """
-    def __init__(self, mdrenderer, conf_file='~/.mdview.conf',
-                 auto_reload=True, keep_on_top=False):
+    def __init__(self, mdrenderer, width=668, height=700, pos_x=100, pos_y=100,
+                 zoom_level=1, auto_reload=True, keep_on_top=False):
         self.mdrenderer = mdrenderer
-        self.conf_file = conf_file
+        self.width = width
+        self.height = height
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.zoom_level = zoom_level
         self.auto_reload = auto_reload
         self.keep_on_top = keep_on_top
-        self.did_reload = False # Set to True on reload
-        self.scroll_pos = None  # The scroll position before reload
-        self.at_bottom = False  # If we were at the bottom before reload
 
-        # Create default window state. Then override default window state with
-        # configuration, if it exists.
-        self.config = {
-            'height': 700,
-            'width': 668,
-            'pos_x': 100,
-            'pos_y': 100,
-            'zoom_level': 1,
-        }
-        self.load_config()
+        self.did_reload = False  # Set to True on reload
+        self.scroll_pos = None   # The scroll position before reload
+        self.at_bottom = False   # If we were at the bottom before reload
 
-        self.win_main = self.make_win_main(self.config['width'],
-                                           self.config['height'],
-                                           self.keep_on_top)
-        self.toolbar = self.make_toolbar(toolbar_items)
-        self.webview = self.make_webview(self.config['zoom_level'])
+        # Construct widgets
+        self.win_main = self.make_win_main(self.width,
+                                           self.height,
+                                           self.keep_on_top,
+                                           self.pos_x,
+                                           self.pos_y)
+        self.toolbar = self.make_toolbar(toolbar_items, theme_items)
+        self.webview = self.make_webview(self.zoom_level)
         self.scroll_window = gtk.ScrolledWindow(None, None)
         self.scroll_window.add(self.webview)
 
@@ -169,22 +199,22 @@ class GUI:
 
         self.win_main.add(vbox)
         self.win_main.show_all()
-        self.win_main.move(self.config['pos_x'], self.config['pos_y'])
 
         self.load_markdown()
 
-        # Periodically trigger inotify events
+        # Periodically trigger inotify events so we detect changes in the
+        # loaded content
         self.mdrenderer.add_watch_notify_callback(self.do_reload)
         gobject.timeout_add(200, self.auto_reload_timer)
 
-    def make_win_main(self, width, height, keep_on_top):
+    def make_win_main(self, width, height, keep_on_top, pos_x, pos_y):
         win_main = gtk.Window(gtk.WINDOW_TOPLEVEL)
         win_main.resize(width, height)
         win_main.set_keep_above(keep_on_top)
+        win_main.move(pos_x, pos_y)
         return win_main
 
     def make_webview(self, zoom_level):
-        # Construct the webkit HTML view
         webview = webkit.WebView()
         ws = webview.get_settings()
         ws.set_property('enable-plugins', False)
@@ -194,12 +224,12 @@ class GUI:
         webview.set_maintains_back_forward_list(True)
         return webview
 
-    def make_toolbar(self, toolbar_items):
-        # Put together the toolbar from the `toolbar_items`.
+    def make_toolbar(self, toolbar_items, theme_items):
         toolbar = gtk.Toolbar()
         toolbar.set_orientation(gtk.ORIENTATION_HORIZONTAL)
         toolbar.set_style(gtk.TOOLBAR_BOTH_HORIZ)
 
+        # Add stock toolbar items
         for toolbar_item in toolbar_items:
             stock_item, label, callback, user_data, pos = toolbar_item
             callback_method = getattr(self, 'ev_tb_' + callback)
@@ -209,7 +239,7 @@ class GUI:
             button.set_is_important(True)
             toolbar.insert(button, pos)
 
-        # Add a template selection dropdown to the toolbar
+        # Add a theme / template selection dropdown to the toolbar
         menu = gtk.Menu()
         for theme_item in theme_items:
             menu_item = gtk.MenuItem(theme_item[0])
@@ -230,27 +260,6 @@ class GUI:
         Start the GUI
         """
         gtk.main()
-
-    def load_config(self):
-        """
-        Load config with window position, etc from disk.
-        """
-        try:
-            with open(os.path.expanduser(self.conf_file), 'r') as f:
-                self.config.update(json.load(f))
-        except IOError as err:
-            if err.errno == 2:
-                pass
-            else:
-                raise
-
-    def save_config(self):
-        """
-        Save config with window position, etc to disk.
-        """
-        config_path = os.path.expanduser('~/.mdview.conf')
-        with open(config_path, 'w') as f:
-            json.dump(self.config, f)
 
     def load_markdown(self):
         """
@@ -274,14 +283,13 @@ class GUI:
         self.mdrenderer.watch_update()
         return True
 
-    def do_stop(self, toolbar_item=None):
+    def do_stop(self):
         """
         Save the configuration and stop the GUI
         """
-        self.save_config()
         gtk.main_quit()
 
-    def do_back(self, toolbar_item=None):
+    def do_back(self):
         """
         Go back in the browser history.
         """
@@ -292,14 +300,14 @@ class GUI:
             # there is no page to go back to, se we reload instead.
             self.do_reload()
 
-    def do_reload(self, toolbar_item=None):
+    def do_reload(self):
         """
         Reload the markdown
         """
         self.did_reload = True
         self.load_markdown()
 
-    def do_save_html(self, toolbar_item=None):
+    def do_save_html(self):
         """
         Save rendered markdown to a file.
         """
@@ -373,13 +381,11 @@ class GUI:
         win_size = self.win_main.get_size()
         win_pos = self.win_main.get_position()
         zoom_level = self.webview.get_zoom_level()
-        self.config.update({
-            'height': win_size[1],
-            'width': win_size[0],
-            'pos_x': win_pos[0],
-            'pos_y': win_pos[1],
-            'zoom_level': zoom_level,
-        })
+        self.width = win_size[0]
+        self.height = win_size[1]
+        self.pos_x = win_pos[0]
+        self.pos_y = win_pos[1]
+        self.zoom_level = zoom_level
 
     def ev_load_status(self, webview, load_status):
         """
@@ -429,7 +435,21 @@ if __name__ == "__main__":
         sys.stderr.write("{}\n".format(err))
         sys.exit(1)
 
+    config = Config(os.path.expanduser('~/.config/mdpreview.conf'))
     theme_dir = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'themes')
     mdrenderer = MDRenderer(args[0], theme_dir=theme_dir, theme=options.theme)
-    gui = GUI(mdrenderer, keep_on_top=options.keep_on_top)
+    gui = GUI(mdrenderer,
+              width=config.get('width'),
+              height=config.get('height'),
+              pos_x=config.get('pos_x'),
+              pos_y=config.get('pos_y'),
+              zoom_level=config.get('zoom_level'),
+              keep_on_top=options.keep_on_top)
+
     gui.run()
+    config.set('height', gui.height)
+    config.set('width', gui.width)
+    config.set('pos_x', gui.pos_x)
+    config.set('pos_y', gui.pos_y)
+    config.set('zoom_level', gui.zoom_level)
+    config.save()
