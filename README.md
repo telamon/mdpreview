@@ -23,7 +23,7 @@ Features
 * Remembers window state between invocations.
 * Auto-reload that preserves scroll position.
 * Theme support (github, bitbucket, solarized, whiteonblack)
-* Vi motion keys (`j`, `k`, `G`, `g`)
+* ~~Vi motion keys (`j`, `k`, `G`, `g`)~~ (see below)
 * Append detection. If the end of the document is being viewed and new contents
   is appended, mdpreview automatically scrolls to the bottom.
 * Optional *Keep-on-top* window hint, to keep the preview always on top.
@@ -31,6 +31,7 @@ Features
 ### Todos
 
 * Images are not refreshed on reload.
+* Vi motion keys are temporarily broken.
 
 
 Installation
@@ -38,15 +39,18 @@ Installation
 
 Requirements:
 
-* python-webkit
-* python-markdown
+
+* python3-gi
+* python markdown
 * pyinotify
 
 
 On Debian / Ubuntu systems, to install the dependencies (they're most probably
 already installed):
 
-    $ sudo apt-get install python-webkit python-markdown python-pyinotify
+    $ sudo apt-get install python3-gi
+    $ pip3 install markdown
+    $ pip3 install pyinotify
 
 You can run `mdpreview` directly from the git repository:
 
