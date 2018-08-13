@@ -1,6 +1,8 @@
 mdpreview
 =========
 
+# This project is currently broken
+
 A simple GTK-based Markdown previewer, designed to be used with an external
 editor.
 
