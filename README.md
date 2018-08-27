@@ -37,7 +37,6 @@ Requirements:
 * `python3-pyqt5.qtwebkit` library
 * Python3 `markdown` and `pyinotify` libraries
 
-
 On Debian / Ubuntu systems, to install the dependencies (they're most probably
 already installed):
 
@@ -98,11 +97,6 @@ The following themes are available by default:
 * **`j`**, **`k`**: Scroll down / up (vi keybindings)
 * **`G`**, **`gg`**: Scroll to bottom / top (vi keybindings)
 * **`s`**: Save to HTML.
-
-### Auto-reloading
-
-mdpreview automatically reloads the Markdown file if it's been changed. It
-preserves the scrolling position during reloading.
 
 Licensing
 ---------
