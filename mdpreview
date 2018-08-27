@@ -87,6 +87,10 @@ keypress_items = [
         "key": Qt.Key_Q,
         "event": "close",
     },
+    {
+        "key": Qt.Key_R,
+        "event": "reload"
+    }
 ]
 
 
@@ -296,7 +300,14 @@ class GUI:
         current scroll position so that when the webview `loadFinished` event
         triggers, the page is scrolled back to the previous position.
         """
-        self.cur_scroll_pos = self._get_webview_scrollpos()
+        frame = self.webview.page().mainFrame()
+        scroll_pos = frame.scrollPosition()
+
+        if scroll_pos.y() == frame.scrollBarMaximum(Qt.Vertical):
+            self.cur_scroll_pos = [scroll_pos.x(), -1]  # At bottom
+        else:
+            self.cur_scroll_pos = self._get_webview_scrollpos()
+
         log.info("Reloading '{}'. theme={}, scroll_pos={}".format(self.cur_path, self.cur_theme, self.cur_scroll_pos))
         self.load_md(self.cur_path, self.cur_theme)
 
@@ -402,11 +413,16 @@ class GUI:
         need to do this in an event, otherwise the part of the document we're
         trying to scroll too may not have been loaded yet.
         """
+        frame = self.webview.page().mainFrame()
         if self.cur_scroll_pos is not None:
-            x = self.cur_scroll_pos[0]
-            y = self.cur_scroll_pos[1]
-            log.info("Scrolling back to {}, {}".format(x, y))
-            frame = self.webview.page().mainFrame()
+            if self.cur_scroll_pos[1] == -1:
+                x = self.cur_scroll_pos[0]
+                y = frame.scrollBarMaximum(Qt.Vertical)
+                log.info("Scrolling to bottom")
+            else:
+                x = self.cur_scroll_pos[0]
+                y = self.cur_scroll_pos[1]
+                log.info("Scrolling back to {}, {}".format(x, y))
             frame.setScrollPosition(QPoint(x, y))
 
             # Reset scroll pos, in case we load a file outside of the reload
@@ -426,6 +442,9 @@ class GUI:
         """
         frame = self.webview.page().mainFrame()
         frame.scroll(0, -60)
+
+    def _ev_reload(self):
+        self.reload()
 
 
 if __name__ == "__main__":
