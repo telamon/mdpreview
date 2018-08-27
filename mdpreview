@@ -75,22 +75,15 @@ toolbar_items = [
 ]
 
 keypress_items = [
-    {
-        "key": Qt.Key_J,
-        "event": "scroll_down",
-    },
-    {
-        "key": Qt.Key_K,
-        "event": "scroll_up",
-    },
-    {
-        "key": Qt.Key_Q,
-        "event": "close",
-    },
-    {
-        "key": Qt.Key_R,
-        "event": "reload"
-    }
+    {"key": Qt.Key_G, "event": "scroll_top"},
+    {"key": Qt.Key_G, "event": "scroll_bottom", "modifiers": Qt.ShiftModifier},
+    {"key": Qt.Key_J, "event": "scroll_down"},
+    {"key": Qt.Key_K, "event": "scroll_up"},
+    {"key": Qt.Key_Q, "event": "close"},
+    {"key": Qt.Key_R, "event": "reload"},
+    {"key": Qt.Key_Space, "event": "scroll_pgdown"},
+    {"key": Qt.Key_Backspace, "event": "back"},
+    {"key": Qt.Key_Left, "event": "back"},
 ]
 
 
@@ -149,6 +142,7 @@ class GUI:
         self.cur_path = None  # Set by load_md()
         self.cur_scroll_pos = None
         self.history = []
+        self.prev_key = None
 
         icon_path = \
             os.path.join(
@@ -332,7 +326,13 @@ class GUI:
         Handle key press events. Looks in `keypress_items` for actions.
         """
         for keypress_item in keypress_items:
-            if keypress.key() == keypress_item["key"]:
+            if (
+                keypress.key() == keypress_item["key"] and
+                (
+                    "modifiers" not in keypress_item or
+                    (int(keypress.modifiers()) & keypress_item["modifiers"] == keypress_item["modifiers"])
+                )
+               ):
                 event_cb = getattr(self, "_ev_{}".format(keypress_item["event"]))
                 event_cb()
 
@@ -442,6 +442,30 @@ class GUI:
         """
         frame = self.webview.page().mainFrame()
         frame.scroll(0, -60)
+
+    def _ev_scroll_pgdown(self):
+        """
+        Scroll the webview down one page.
+        """
+        frame = self.webview.page().mainFrame()
+        frame.scroll(0, 240)
+
+    def _ev_scroll_top(self):
+        """
+        Scroll to top when 'GG' is pressed.
+        """
+        if self.prev_key == "g":
+            frame = self.webview.page().mainFrame()
+            frame.setScrollPosition(QPoint(0, 0))
+            self.prev_key = None
+        else:
+            self.prev_key = "g"
+
+    def _ev_scroll_bottom(self):
+        frame = self.webview.page().mainFrame()
+        x = 0
+        y = frame.scrollBarMaximum(Qt.Vertical)
+        frame.setScrollPosition(QPoint(x, y))
 
     def _ev_reload(self):
         self.reload()

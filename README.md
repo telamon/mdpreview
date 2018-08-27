@@ -93,9 +93,10 @@ The following themes are available by default:
 ### Keybindings
 
 * **`r`**: Reload
-* **`b`**: Go back
+* **`b` or `Left arrow` or `Backspace`**: Go back
 * **`Esc`**, **`q`**: Quit
 * **`j`**, **`k`**: Scroll down / up (vi keybindings)
+* **`G`**, **`gg`**: Scroll to bottom / top (vi keybindings)
 * **`s`**: Save to HTML.
 
 ### Auto-reloading
