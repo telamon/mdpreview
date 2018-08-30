@@ -26,6 +26,12 @@ formatter = logging.Formatter('%(asctime)s %(levelname)8s %(name)s | %(message)s
 ch.setFormatter(formatter)
 log.addHandler(ch)
 
+extensions = (
+    '.md',
+    '.txt',
+    '.markdown',
+)
+
 theme_items = (
     ('Bitbucket', 'bitbucket'),
     ('Dark', 'dark'),
@@ -397,13 +403,16 @@ class GUI:
         Called when the user clicks a link in the current file. If it's a local
         link, open it in mdpreview. Otherwise open it in the user's browser.
         """
-        # FIXME: Should look at extension (.md).
         # FIXME: Should be able to load https://example.com/README.md in mdpreview
-        if url.scheme() == "" or url.scheme() == "file":
+        log.info("Link clicked: {}".format(url.url()))
+        ext = os.path.splitext(url.path())
+        if url.scheme() == "file" and ext[1].lower() in extensions:
             log.info("Adding '{}' to the history".format(self.cur_path))
+            log.info("Opening '{}' in mdpreview".format(url.path()))
             self.history.append(self.cur_path)
             self.load_md(url.path())
         else:
+            log.info("Opening '{}' in external browser".format(url.url()))
             webbrowser.open_new_tab(url.url())
 
     def _ev_webview_load_finished(self, ok):
