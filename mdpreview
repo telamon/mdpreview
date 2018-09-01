@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+# TODO:
+#
+#  - render checkbox lists.
+#  - render tables.
+#
+
 import sys
 if sys.version_info.major < 3:
     sys.stderr.write("This script requires python3\n")
@@ -12,6 +18,7 @@ import signal
 import markdown
 import pyinotify
 from PyQt5.Qt import *
+import requests
 
 app_name = "mdpreview"
 app_version = "2.0"
@@ -117,12 +124,28 @@ class MDRenderer:
             raise IOError("Not a valid theme file: '{}'".format(theme_path))
         return theme_path
 
-    def render(self, path, theme=None):
+    def render_path(self, path, theme=None):
         """
-        Render the contents of `path` according to the currently set theme.
+        Render the contents of local file `path` according to `theme` (or the
+        default theme). If you need to render a URI ('file://' or
+        'http(s);//'), use MDRenderer.render_url() instead.
         """
+        log.info("Rendering path '{}'".format(path))
         theme_contents = self._read_theme(theme)
         md_contents = open(path, 'r').read()
+        md_html = markdown.markdown(md_contents)
+        html = theme_contents.replace('{{{ contents }}}', md_html)
+        return html
+
+    def render_url(self, url, theme=None):
+        """
+        Render the contents of url `url` according to `theme` (or the default
+        theme). If you need to render a local path (not 'file://' or
+        'http(s);//'), use MDRenderer.render_path() instead.
+        """
+        theme_contents = self._read_theme(theme)
+        r = requests.get(url)
+        md_contents = r.text
         md_html = markdown.markdown(md_contents)
         html = theme_contents.replace('{{{ contents }}}', md_html)
         return html
@@ -145,7 +168,7 @@ class GUI:
     def __init__(self, md_renderer, keep_on_top=False):
         self.md_renderer = md_renderer
         self.keep_on_top = keep_on_top
-        self.cur_path = None  # Set by load_md()
+        self.cur_uri = None  # Set by load_md()
         self.cur_scroll_pos = None
         self.history = []
         self.prev_key = None
@@ -255,36 +278,55 @@ class GUI:
             if action.data() == id:
                 return action
 
-    def load_md(self, path, theme=None):
+    def load_md(self, uri, theme=None):
         """
-        Render `path` as Markdown to HTML according to `theme` and display it
-        in the web view. Also sets up the inotify events to watch for changes
-        to `path`, sets the window title, etc.
+        Render `uri` as Markdown to HTML according to `theme` and display it in
+        the web view. Also sets up the inotify events to watch for changes to
+        `path`, sets the window title, etc. `uri` can either be a local
+        filesystem path (starting with '/') or an url ('file:///',
+        'http(s)://').
         """
-        log.info("Loading '{}' with theme '{}'".format(path, theme))
+        assert type(uri) == QUrl
+        log.info("Loading '{}' (isLocalFile={}) with theme '{}'".format(uri.url(), uri.isLocalFile(), theme))
 
         # Clear web view cache
         QWebSettings.clearMemoryCaches();
-
-        # Render MD to HTML and display
-        rel_path = os.path.dirname(os.path.realpath(path))
-        rel_url = "file://{}/".format(rel_path)
-        self.webview.setHtml(self.md_renderer.render(path, theme), QUrl(rel_url))
 
         # Remove previous file modification watchers
         log.info("Removing current inotify watches")
         self.watchmanager.rm_watch(list(self.watchmanager.watches.keys()))
 
-        # Watch the file for modifications
-        log.info("Adding {} to the inotify watch list".format(path))
-        mask = pyinotify.IN_MODIFY
-        self.watchmanager.add_watch(os.path.dirname(path), mask)
+        # Render MD to HTML and display
+        log.debug("uri: {}".format(uri))
+        log.debug("uri.url: {}".format(uri.url()))
+        log.debug("uri.scheme: {}".format(uri.scheme()))
+        log.debug("uri.path: {}".format(uri.path()))
+        log.debug("uri.isLocalFile: {}".format(uri.isLocalFile()))
+
+        if uri.scheme() == '' or uri.isLocalFile():
+            # File on local disk
+            abs_path = os.path.realpath(uri.path())
+            rel_url = "file://{}/".format(os.path.dirname(abs_path))
+            md_contents = self.md_renderer.render_path(abs_path, theme)
+            win_title = abs_path
+
+            # Watch the file for modifications
+            log.info("Adding {} to the inotify watch list".format(abs_path))
+            mask = pyinotify.IN_MODIFY
+            self.watchmanager.add_watch(os.path.dirname(abs_path), mask)
+        else:
+            # File on the intertubes
+            rel_url = uri.url()
+            md_contents = self.md_renderer.render_url(uri.url(), theme)
+            win_title = rel_url
+
+        self.webview.setHtml(md_contents, QUrl(rel_url))
 
         # Set window title
-        self.win.setWindowTitle("{}: {}".format(app_name, path))
+        self.win.setWindowTitle("{}: {}".format(app_name, win_title))
 
         # Track some metadata
-        self.cur_path = path
+        self.cur_uri = uri
         self.cur_theme = theme
 
         # Gray out the 'Back' button
@@ -296,7 +338,7 @@ class GUI:
 
     def reload(self):
         """
-        Reload the currently viewed Markdown file (self.cur_path). Stores the
+        Reload the currently viewed Markdown file (self.cur_uri). Stores the
         current scroll position so that when the webview `loadFinished` event
         triggers, the page is scrolled back to the previous position.
         """
@@ -308,8 +350,8 @@ class GUI:
         else:
             self.cur_scroll_pos = self._get_webview_scrollpos()
 
-        log.info("Reloading '{}'. theme={}, scroll_pos={}".format(self.cur_path, self.cur_theme, self.cur_scroll_pos))
-        self.load_md(self.cur_path, self.cur_theme)
+        log.info("Reloading '{}'. theme={}, scroll_pos={}".format(self.cur_uri, self.cur_theme, self.cur_scroll_pos))
+        self.load_md(self.cur_uri, self.cur_theme)
 
     def _get_webview_scrollpos(self):
         """
@@ -348,9 +390,9 @@ class GUI:
         """
         if len(self.history) > 0:
             log.info("history: {}".format(self.history))
-            path = self.history.pop()
-            log.info("Popped '{}' from the history".format(path))
-            self.load_md(path, self.cur_theme)
+            uri = self.history.pop()
+            log.info("Popped '{}' from the history".format(uri))
+            self.load_md(QUrl(uri), self.cur_theme)
 
     def _ev_close_event(self, event):
         """
@@ -388,7 +430,7 @@ class GUI:
         file_info = QFileDialog.getSaveFileName(self.win, "Save as HTML...")
         if file_info[0] != '':
             with open(file_info[0], 'w') as f:
-                f.write(self.md_renderer.render(self.cur_path, self.cur_theme))
+                f.write(self.md_renderer.render_path(self.cur_uri, self.cur_theme))
 
     def _ev_theme_dropdown_changed(self, new_index):
         """
@@ -406,11 +448,11 @@ class GUI:
         # FIXME: Should be able to load https://example.com/README.md in mdpreview
         log.info("Link clicked: {}".format(url.url()))
         ext = os.path.splitext(url.path())
-        if url.scheme() == "file" and ext[1].lower() in extensions:
-            log.info("Adding '{}' to the history".format(self.cur_path))
-            log.info("Opening '{}' in mdpreview".format(url.path()))
-            self.history.append(self.cur_path)
-            self.load_md(url.path())
+        if ext[1].lower() in extensions:
+            log.info("Adding '{}' to the history".format(self.cur_uri))
+            log.info("Opening '{}' in mdpreview".format(url.url()))
+            self.history.append(self.cur_uri)
+            self.load_md(url)
         else:
             log.info("Opening '{}' in external browser".format(url.url()))
             webbrowser.open_new_tab(url.url())
@@ -512,15 +554,6 @@ if __name__ == "__main__":
     if options.debug:
         log.setLevel(logging.DEBUG)
 
-    # Try to open the specified markdown file before doing anything else, so we
-    # don't flash a useless window on the screen.
-    try:
-        with open(args[0], 'r') as test_open:
-            pass
-    except IOError as err:
-        sys.stderr.write("{}\n".format(err))
-        sys.exit(1)
-
     # Make sure ctrl-c on the commandline stops the application
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -528,5 +561,5 @@ if __name__ == "__main__":
     md_renderer = MDRenderer(theme_dir=theme_dir, default_theme=options.theme)
     app = QApplication(args)
     gui = GUI(md_renderer, options.keep_on_top)
-    gui.load_md(args[0])
+    gui.load_md(QUrl(args[0]))
     app.exec_()
