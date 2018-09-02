@@ -88,6 +88,7 @@ toolbar_items = [
 ]
 
 keypress_items = [
+    {"key": Qt.Key_D, "event": "dump"},
     {"key": Qt.Key_G, "event": "scroll_top"},
     {"key": Qt.Key_G, "event": "scroll_bottom", "modifiers": Qt.ShiftModifier},
     {"key": Qt.Key_J, "event": "scroll_down"},
@@ -172,6 +173,7 @@ class GUI:
         self.cur_scroll_pos = None
         self.history = []
         self.prev_key = None
+        self.settings = QSettings("electricmonk", app_name)
 
         icon_path = \
             os.path.join(
@@ -182,6 +184,9 @@ class GUI:
             )
         self.win = QMainWindow()
         self.win.setWindowIcon(QIcon(icon_path))
+        geometry = self.settings.value("geometry")
+        if geometry is not None:
+            self.win.restoreGeometry(geometry);
         self.win.closeEvent = self._ev_close_event
         if self.keep_on_top is True:
             self.win.setWindowFlags(Qt.WindowStaysOnTopHint)
@@ -404,6 +409,9 @@ class GUI:
         """
         Toolbar: Quit application
         """
+        log.debug("Saving geometry")
+        self.settings.setValue("geometry", self.win.saveGeometry())
+        self.settings.sync()
         log.info("Quiting application")
         QCoreApplication.quit()
 
@@ -520,6 +528,14 @@ class GUI:
 
     def _ev_reload(self):
         self.reload()
+
+    def _ev_dump(self):
+        """
+        Dump some debugging output to the console.
+        """
+        log.debug("history: {}".format(self.history))
+        log.debug("geometry: {}".format(self.win.geometry()))
+        log.debug("saveGeometry: {}".format(self.win.saveGeometry()))
 
 
 if __name__ == "__main__":
