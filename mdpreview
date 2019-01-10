@@ -311,8 +311,8 @@ class GUI:
         if uri.scheme() == '' or uri.isLocalFile():
             # File on local disk
             abs_path = os.path.realpath(uri.path())
-            rel_url = "file://{}/".format(os.path.dirname(abs_path))
             md_contents = self.md_renderer.render_path(abs_path, theme)
+            rel_url = uri.url()
             win_title = abs_path
 
             # Watch the file for modifications
@@ -325,6 +325,7 @@ class GUI:
             md_contents = self.md_renderer.render_url(uri.url(), theme)
             win_title = rel_url
 
+        log.info("Setting webview contents to url {}".format(rel_url))
         self.webview.setHtml(md_contents, QUrl(rel_url))
 
         # Set window title
@@ -455,7 +456,11 @@ class GUI:
         """
         log.info("Link clicked: {}".format(url.url()))
         ext = os.path.splitext(url.path())
-        if ext[1].lower() in extensions:
+        if url.url().startswith("#"):
+            log.info("Jumping to anchor {}".format(url.url()))
+            frame = self.webview.page().currentFrame()
+            frame.scrollToAnchor(url.url()[1:])
+        elif ext[1].lower() in extensions:
             log.info("Adding '{}' to the history".format(self.cur_uri))
             log.info("Opening '{}' in mdpreview".format(url.url()))
             self.history.append(self.cur_uri)
