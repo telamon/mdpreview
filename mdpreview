@@ -134,7 +134,8 @@ class MDRenderer:
         log.info("Rendering path '{}'".format(path))
         theme_contents = self._read_theme(theme)
         md_contents = open(path, 'r').read()
-        md_html = markdown.markdown(md_contents)
+        md = markdown.Markdown(extensions=['toc', 'tables', 'markdown_checklist.extension'])
+        md_html = md.convert(md_contents)
         html = theme_contents.replace('{{{ contents }}}', md_html)
         return html
 
