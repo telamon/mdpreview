@@ -453,7 +453,6 @@ class GUI:
         Called when the user clicks a link in the current file. If it's a local
         link, open it in mdpreview. Otherwise open it in the user's browser.
         """
-        # FIXME: Should be able to load https://example.com/README.md in mdpreview
         log.info("Link clicked: {}".format(url.url()))
         ext = os.path.splitext(url.path())
         if ext[1].lower() in extensions:
