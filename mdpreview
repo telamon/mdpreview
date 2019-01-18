@@ -321,15 +321,29 @@ class GUI:
         self.watchmanager.rm_watch(list(self.watchmanager.watches.keys()))
 
         # Render MD to HTML and display
-        log.debug("uri: {}".format(uri))
-        log.debug("uri.url: {}".format(uri.url()))
-        log.debug("uri.scheme: {}".format(uri.scheme()))
-        log.debug("uri.path: {}".format(uri.path()))
-        log.debug("uri.isLocalFile: {}".format(uri.isLocalFile()))
+        log.debug("cur uri: {}".format(self.cur_uri))
+        log.debug("new uri: {}".format(uri))
+        log.debug("new uri.url: {}".format(uri.url()))
+        log.debug("new uri.scheme: {}".format(uri.scheme()))
+        log.debug("new uri.path: {}".format(uri.path()))
+        log.debug("new uri.isLocalFile: {}".format(uri.isLocalFile()))
 
         if uri.scheme() == '' or uri.isLocalFile():
             # File on local disk
-            abs_path = os.path.realpath(uri.path())
+            if uri.path().startswith("/"):
+                # Absolute path
+                log.debug("New file is on local disk, relative to /")
+                abs_path = os.path.realpath(uri.path())
+            else:
+                # Relative to the file we're currently viewing
+                log.debug("New file is on local disk, relative to our current doc")
+                cur_viewed_dir = os.path.dirname(self.cur_uri.path())
+                abs_path = os.path.realpath(os.path.join(cur_viewed_dir, uri.path()))
+
+                # Modify the uri so the path is absolute.
+                uri.setPath(abs_path)
+
+            # Render
             md_contents = self.md_renderer.render_path(abs_path, theme)
             rel_url = uri.url()
             win_title = abs_path
@@ -338,8 +352,10 @@ class GUI:
             log.info("Adding {} to the inotify watch list".format(abs_path))
             mask = pyinotify.IN_MODIFY
             self.watchmanager.add_watch(os.path.dirname(abs_path), mask)
+
         else:
             # File on the intertubes
+            log.debug("New file is on the network")
             rel_url = uri.url()
             md_contents = self.md_renderer.render_url(uri.url(), theme)
             win_title = rel_url
