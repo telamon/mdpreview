@@ -337,6 +337,8 @@ class GUI:
             else:
                 # Relative to the file we're currently viewing
                 log.debug("New file is on local disk, relative to our current doc")
+                if self.cur_uri is None:
+                    self.cur_uri = uri
                 cur_viewed_dir = os.path.dirname(self.cur_uri.path())
                 abs_path = os.path.realpath(os.path.join(cur_viewed_dir, uri.path()))
 
