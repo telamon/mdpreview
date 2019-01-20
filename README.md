@@ -70,6 +70,7 @@ Basic usage:
       -k, --keep-on-top     Keep window on top
       -t THEME, --theme=THEME
                             Theme (name or full path to .html). Default: github
+      --no-toc              Disable the Table Of Contents sidebar
 
 ### Themes
 
