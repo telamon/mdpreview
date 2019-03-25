@@ -95,6 +95,47 @@ keypress_items = [
     {"key": Qt.Key_Left, "event": "back"},
 ]
 
+# Urlize markdown extensions taken from https://github.com/r0wb0t/markdown-urlize
+# Copyright: 2-clause BSD license.
+# Covers all Urlize* classes.
+
+# Global Vars
+URLIZE_RE = '(%s)' % '|'.join([
+    r'<(?:f|ht)tps?://[^>]*>',
+    r'\b(?:f|ht)tps?://[^)<>\s]+[^.,)<>\s]',
+    r'\bwww\.[^)<>\s]+[^.,)<>\s]',
+    r'[^(<\s]+\.(?:com|net|org)\b',
+])
+
+class UrlizePattern(markdown.inlinepatterns.Pattern):
+    """ Return a link Element given an autolink (`http://example/com`). """
+    def handleMatch(self, m):
+        url = m.group(2)
+
+        if url.startswith('<'):
+            url = url[1:-1]
+
+        text = url
+
+        if not url.split('://')[0] in ('http','https','ftp'):
+            if '@' in url and not '/' in url:
+                url = 'mailto:' + url
+            else:
+                url = 'http://' + url
+
+        el = markdown.util.etree.Element("a")
+        el.set('href', url)
+        el.text = markdown.util.AtomicString(text)
+        return el
+
+
+class UrlizeExtension(markdown.Extension):
+    """ Urlize Extension for Python-Markdown. """
+
+    def extendMarkdown(self, md, md_globals):
+        """ Replace autolink with UrlizePattern """
+        md.inlinePatterns['autolink'] = UrlizePattern(URLIZE_RE, md)
+
 
 class MDRenderer:
     """
@@ -145,7 +186,13 @@ class MDRenderer:
 
     def _render_md(self, contents, theme=None):
         theme_contents = self._read_theme(theme)
-        md = markdown.Markdown(extensions=['toc', 'tables', 'markdown_checklist.extension'])
+        extensions = [
+            'toc',
+            'tables',
+            'markdown_checklist.extension',
+            UrlizeExtension()
+        ]
+        md = markdown.Markdown(extensions=extensions)
         md_html = md.convert(contents)
         html = theme_contents.replace('{{{ contents }}}', md_html)
         return {
