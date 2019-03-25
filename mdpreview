@@ -127,15 +127,9 @@ class MDRenderer:
         'http(s);//'), use MDRenderer.render_url() instead.
         """
         log.info("Rendering path '{}'".format(path))
-        theme_contents = self._read_theme(theme)
-        md_contents = open(path, 'r').read()
-        md = markdown.Markdown(extensions=['toc', 'tables', 'markdown_checklist.extension'])
-        md_html = md.convert(md_contents)
-        html = theme_contents.replace('{{{ contents }}}', md_html)
-        return {
-            "html": html,
-            "toc": md.toc_tokens
-        }
+        with open(path, 'r') as f:
+            md_contents = f.read()
+        return(self._render_md(md_contents))
 
     def render_url(self, url, theme=None):
         """
@@ -143,12 +137,21 @@ class MDRenderer:
         theme). If you need to render a local path (not 'file://' or
         'http(s);//'), use MDRenderer.render_path() instead.
         """
+        log.info("Rendering url '{}'".format(url))
         theme_contents = self._read_theme(theme)
         r = requests.get(url)
         md_contents = r.text
-        md_html = markdown.markdown(md_contents)
+        return(self._render_md(md_contents))
+
+    def _render_md(self, contents, theme=None):
+        theme_contents = self._read_theme(theme)
+        md = markdown.Markdown(extensions=['toc', 'tables', 'markdown_checklist.extension'])
+        md_html = md.convert(contents)
         html = theme_contents.replace('{{{ contents }}}', md_html)
-        return html
+        return {
+            "html": html,
+            "toc": md.toc_tokens
+        }
 
     def _read_theme(self, theme):
         """
@@ -306,11 +309,10 @@ class GUI:
         """
         Render `uri` as Markdown to HTML according to `theme` and display it in
         the web view. Also sets up the inotify events to watch for changes to
-        `path`, sets the window title, etc. `uri` can either be a local
-        filesystem path (starting with '/') or an url ('file:///',
-        'http(s)://').
+        `path`, sets the window title, etc.
         """
         assert type(uri) == QUrl
+        assert uri.scheme() != ''
         log.info("Loading '{}' (isLocalFile={}) with theme '{}'".format(uri.url(), uri.isLocalFile(), theme))
 
         # Clear web view cache
@@ -328,7 +330,7 @@ class GUI:
         log.debug("new uri.path: {}".format(uri.path()))
         log.debug("new uri.isLocalFile: {}".format(uri.isLocalFile()))
 
-        if uri.scheme() == '' or uri.isLocalFile():
+        if uri.isLocalFile():
             # File on local disk
             if uri.path().startswith("/"):
                 # Absolute path
@@ -680,5 +682,11 @@ if __name__ == "__main__":
     md_renderer = MDRenderer(theme_dir=theme_dir, default_theme=options.theme)
     app = QApplication(args)
     gui = GUI(md_renderer, options.keep_on_top, options.toc)
-    gui.load_md(QUrl(args[0]))
+
+    uri = QUrl(args[0])
+    if uri.scheme() == "":
+        uri.setScheme("file")
+        uri.setPath(os.path.realpath(uri.path()))
+
+    gui.load_md(uri)
     app.exec_()
