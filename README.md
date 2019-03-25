@@ -27,6 +27,7 @@ Features
 * Append detection. If the end of the document is being viewed and new contents
   is appended, mdpreview automatically scrolls to the bottom.
 * Optional *Keep-on-top* window hint, to keep the preview always on top.
+* Supported Markdown extensions: TableOfContents, Tables, Checklists, Auto-urlize.
 
 
 Installation
