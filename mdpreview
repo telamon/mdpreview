@@ -167,10 +167,10 @@ class MDRenderer:
         default theme). If you need to render a URI ('file://' or
         'http(s);//'), use MDRenderer.render_url() instead.
         """
-        log.info("Rendering path '{}'".format(path))
+        log.info("Rendering path '{}' with theme '{}'".format(path, theme))
         with open(path, 'r') as f:
             md_contents = f.read()
-        return(self._render_md(md_contents))
+        return(self._render_md(md_contents, theme))
 
     def render_url(self, url, theme=None):
         """
