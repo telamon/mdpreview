@@ -195,8 +195,7 @@ class MDRenderer:
         md = markdown.Markdown(extensions=extensions)
         md_html = md.convert(contents)
         html = theme_contents.replace('{{{ contents }}}', md_html)
-        with open("/home/fboender/bla.html", "w") as f:
-            f.write(html)
+
         return {
             "html": html,
             "toc": md.toc_tokens
