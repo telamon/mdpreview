@@ -195,6 +195,8 @@ class MDRenderer:
         md = markdown.Markdown(extensions=extensions)
         md_html = md.convert(contents)
         html = theme_contents.replace('{{{ contents }}}', md_html)
+        with open("/home/fboender/bla.html", "w") as f:
+            f.write(html)
         return {
             "html": html,
             "toc": md.toc_tokens
@@ -352,30 +354,35 @@ class GUI:
             if action.data() == id:
                 return action
 
-    def load_md(self, uri, theme=None):
+    def _get_uri_abs_path(self, uri):
         """
-        Render `uri` as Markdown to HTML according to `theme` and display it in
-        the web view. Also sets up the inotify events to watch for changes to
-        `path`, sets the window title, etc.
+        Get the absolute path of `uri` if it's a local file. E.g. if the
+        current dir is '/home/fboender' and uri is 'file://foo/bar', then this
+        function returns '/home/fboender/foo/bar'. If the uri is
+        'file:///foo/bar', it returns '/foo/bar'. If the uri isn't local
+        (network), returns None.
+        """
+        if uri.isLocalFile():
+            # File on local disk
+            if uri.path().startswith("/"):
+                # Absolute to root dir
+                abs_path = os.path.realpath(uri.path())
+            else:
+                # Relative to current dir
+                cur_viewed_dir = os.path.dirname(self.cur_uri.path())
+                abs_path = os.path.realpath(os.path.join(cur_viewed_dir, uri.path()))
+
+            return abs_path
+        else:
+            return None
+
+    def render_md(self, uri, theme=None):
+        """
+        Render `uri` as Markdown to HTML according to `theme`.
         """
         assert type(uri) == QUrl
         assert uri.scheme() != ''
-        log.info("Loading '{}' (isLocalFile={}) with theme '{}'".format(uri.url(), uri.isLocalFile(), theme))
-
-        # Clear web view cache
-        QWebSettings.clearMemoryCaches();
-
-        # Remove previous file modification watchers
-        log.info("Removing current inotify watches")
-        self.watchmanager.rm_watch(list(self.watchmanager.watches.keys()))
-
-        # Render MD to HTML and display
-        log.debug("cur uri: {}".format(self.cur_uri))
-        log.debug("new uri: {}".format(uri))
-        log.debug("new uri.url: {}".format(uri.url()))
-        log.debug("new uri.scheme: {}".format(uri.scheme()))
-        log.debug("new uri.path: {}".format(uri.path()))
-        log.debug("new uri.isLocalFile: {}".format(uri.isLocalFile()))
+        log.info("Rendering '{}' (isLocalFile={}) with theme '{}'".format(uri.url(), uri.isLocalFile(), theme))
 
         if uri.isLocalFile():
             # File on local disk
@@ -395,27 +402,52 @@ class GUI:
                 uri.setPath(abs_path)
 
             # Render
-            md_contents = self.md_renderer.render_path(abs_path, theme)
-            rel_url = uri.url()
-            win_title = abs_path
+            return self.md_renderer.render_path(abs_path, theme)
+        else:
+            # File on the intertubes
+            log.debug("New file is on the network")
+            return self.md_renderer.render_url(uri.url(), theme)
 
+    def load_md(self, uri, theme=None):
+        """
+        Render `uri` as Markdown to HTML according to `theme` and display it in
+        the web view. Also sets up the inotify events to watch for changes to
+        `path`, sets the window title, etc.
+        """
+        assert type(uri) == QUrl
+        assert uri.scheme() != ''
+        log.info("Loading '{}' (isLocalFile={}) with theme '{}'".format(uri.url(), uri.isLocalFile(), theme))
+        log.debug("cur uri: {}".format(self.cur_uri))
+        log.debug("new uri: {}".format(uri))
+        log.debug("new uri.url: {}".format(uri.url()))
+        log.debug("new uri.scheme: {}".format(uri.scheme()))
+        log.debug("new uri.path: {}".format(uri.path()))
+        log.debug("new uri.isLocalFile: {}".format(uri.isLocalFile()))
+
+        # Clear web view cache so we don't view cached versions.
+        QWebSettings.clearMemoryCaches();
+
+        # Stop watching the previous file
+        log.info("Removing current inotify watches")
+        self.watchmanager.rm_watch(list(self.watchmanager.watches.keys()))
+
+        # Render the contents of the file or uri to HTML
+        md_contents = self.render_md(uri, theme=theme)
+
+        if uri.isLocalFile():
             # Watch the file for modifications
+            abs_path = self._get_uri_abs_path(uri)
             log.info("Adding {} to the inotify watch list".format(abs_path))
             mask = pyinotify.IN_MODIFY
             self.watchmanager.add_watch(os.path.dirname(abs_path), mask)
 
-        else:
-            # File on the intertubes
-            log.debug("New file is on the network")
-            rel_url = uri.url()
-            md_contents = self.md_renderer.render_url(uri.url(), theme)
-            win_title = rel_url
-
+        rel_url = uri.url()
         log.info("Setting webview contents to url {}".format(rel_url))
         self.webview.setHtml(md_contents["html"], QUrl(rel_url))
         self.set_toc(md_contents["toc"])
 
         # Set window title
+        win_title = uri.url()
         self.win.setWindowTitle("{}: {}".format(app_name, win_title))
 
         # Track some metadata
@@ -576,8 +608,9 @@ class GUI:
         """
         file_info = QFileDialog.getSaveFileName(self.win, "Save as HTML...")
         if file_info[0] != '':
+            md_contents = self.render_md(self.cur_uri, self.cur_theme)
             with open(file_info[0], 'w') as f:
-                f.write(self.md_renderer.render_path(self.cur_uri, self.cur_theme))
+                f.write(md_contents["html"])
 
     def _ev_theme_dropdown_changed(self, new_index):
         """
