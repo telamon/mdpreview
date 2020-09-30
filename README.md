@@ -35,17 +35,18 @@ Installation
 
 Requirements:
 
-* `python3-pyqt5.qtwebkit` library
+* Debian / Ubuntu based OS (tested on 18.04)
+* `python3-pyqt5.qtwebkit` Debian pacckage
 * Python3 `markdown` and `pyinotify` libraries
 
-On Debian / Ubuntu systems, to install the dependencies (they're most probably
-already installed):
+To install mdpreview's dependencies:
 
-    $ sudo apt-get install python3-pyqt5.qtwebkit
-    $ pip3 install markdown
-    $ pip3 install pyinotify
+    $ sudo apt install python3-pyqt5.qtwebkit
+    $ sudo apt install python3-pip
+    $ sudo pip3 install -r ./requirements.txt
 
-You can run `mdpreview` directly from the git repository:
+You can run `mdpreview` directly from the git repository after installing the
+dependencies:
 
     $ git clone https://github.com/fboender/mdpreview.git
     $ cd mdpreview
@@ -55,7 +56,8 @@ If you wish to install it on your system, run the `install.sh` script:
 
     $ sudo install.sh
 
-This will also put an `uninstall.sh` script in `/usr/local/lib/mdpreview/uninstall.sh`.
+This will also put an `uninstall.sh` script in
+`/usr/local/lib/mdpreview/uninstall.sh`.
 
 Usage
 -----
