@@ -16,7 +16,7 @@ from PyQt5 import QtCore
 import requests
 
 app_name = "mdpreview"
-app_version = "2.0"
+app_version = "2.1"
 
 # Setup logging
 level = logging.WARNING
@@ -74,6 +74,14 @@ toolbar_items = [
         "icon": "document-save-as",
         "label": "Save as HTML",
         "shortcut": "S",
+    },
+    {
+        "id": "tb-edit",
+        "type": "button",
+        "event": "edit",
+        "icon": "text-editor",
+        "label": "Edit",
+        "shortcut": "E",
     },
     {
         "id": "tb-theme",
@@ -610,6 +618,15 @@ class GUI:
             md_contents = self.render_md(self.cur_uri, self.cur_theme)
             with open(file_info[0], 'w') as f:
                 f.write(md_contents["html"])
+
+    def _ev_edit(self):
+        """
+        Toolbar: Edit current file.
+        """
+        if self.cur_uri.isLocalFile() is True:
+            editor = os.environ.get("MDPREVIEW_EDITOR", "gvim")
+            cmd = "{} {}".format(editor, self.cur_uri.path())
+            os.system(cmd)
 
     def _ev_theme_dropdown_changed(self, new_index):
         """

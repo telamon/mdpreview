@@ -28,6 +28,7 @@ Features
   is appended, mdpreview automatically scrolls to the bottom.
 * Optional *Keep-on-top* window hint, to keep the preview always on top.
 * Supported Markdown extensions: TableOfContents, Tables, Checklists, Auto-urlize.
+* Invoke editor from mdpreview.
 
 
 Installation
@@ -100,7 +101,10 @@ The following themes are available by default:
 * **`Esc`**, **`q`**: Quit
 * **`j`**, **`k`**: Scroll down / up (vi keybindings)
 * **`G`**, **`gg`**: Scroll to bottom / top (vi keybindings)
-* **`s`**: Save to HTML.
+* **`s`**: Save to HTML
+* **`e`**: Open current file in editor (if the file is local).  The editor can
+  be set with the `MDPREVIEW_EDITOR` environment variable.  Defaults to
+  `gvim`.
 
 Licensing
 ---------
