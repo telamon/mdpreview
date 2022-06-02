@@ -19,7 +19,7 @@ It includes themes that closely resemble *github*, and *bitbucket*.
 Features
 --------
 
-* Written in Python, so runs nearly everywhere.
+* Table of Content sidebar.
 * Remembers window state between invocations.
 * Auto-reload that preserves scroll position.
 * Theme support (bitbucket, dark, github, solarized, whiteonblack)
@@ -28,7 +28,9 @@ Features
   is appended, mdpreview automatically scrolls to the bottom.
 * Optional *Keep-on-top* window hint, to keep the preview always on top.
 * Supported Markdown extensions: TableOfContents, Tables, Checklists, Auto-urlize.
+* Save generated HTML.
 * Invoke editor from mdpreview.
+* Written in Python, so runs nearly everywhere.
 
 
 Installation
