@@ -195,6 +195,7 @@ class MDRenderer:
     def _render_md(self, contents, theme=None):
         theme_contents = self._read_theme(theme)
         extensions = [
+            'fenced_code',
             'toc',
             'tables',
             'markdown_checklist.extension',
