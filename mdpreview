@@ -16,7 +16,7 @@ from PyQt5 import QtCore
 import requests
 
 app_name = "mdpreview"
-app_version = "2.1"
+app_version = "2.2"
 
 # Setup logging
 level = logging.WARNING
