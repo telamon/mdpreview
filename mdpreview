@@ -775,7 +775,20 @@ if __name__ == "__main__":
     # Make sure ctrl-c on the commandline stops the application
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    theme_dir = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'themes')
+    # Find the theme dir by trying some paths.
+    bin_dir = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])))
+    print(bin_dir)
+    theme_dirs = [
+        os.path.join(bin_dir, 'themes'),
+        os.path.realpath(os.path.join(bin_dir, '..', 'ib', 'mdpreview', 'themes'))
+    ]
+    for theme_dir in theme_dirs:
+        if os.path.exists(theme_dir):
+            break
+    else:
+        sys.stderr.write("Couldn't find a theme dir in any of {}".format(", ".join(theme_dirs)))
+        sys.exit(1)
+
     md_renderer = MDRenderer(theme_dir=theme_dir, default_theme=options.theme)
     app = QApplication(args)
     gui = GUI(md_renderer, options.keep_on_top, options.toc)
