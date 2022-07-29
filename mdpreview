@@ -780,7 +780,7 @@ if __name__ == "__main__":
     print(bin_dir)
     theme_dirs = [
         os.path.join(bin_dir, 'themes'),
-        os.path.realpath(os.path.join(bin_dir, '..', 'ib', 'mdpreview', 'themes'))
+        os.path.realpath(os.path.join(bin_dir, '..', 'lib', 'mdpreview', 'themes'))
     ]
     for theme_dir in theme_dirs:
         if os.path.exists(theme_dir):
