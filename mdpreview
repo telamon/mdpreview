@@ -35,6 +35,7 @@ extensions = (
 )
 
 theme_items = (
+    ('Decent', 'decent'),
     ('Bitbucket', 'bitbucket'),
     ('Dark', 'dark'),
     ('Github', 'github'),
@@ -101,6 +102,7 @@ keypress_items = [
     {"key": Qt.Key_Space, "event": "scroll_pgdown"},
     {"key": Qt.Key_Backspace, "event": "back"},
     {"key": Qt.Key_Left, "event": "back"},
+    {"key": Qt.Key_F, "event": "immerse" },
 ]
 
 # Urlize markdown extensions taken from https://github.com/r0wb0t/markdown-urlize
@@ -149,7 +151,7 @@ class MDRenderer:
     """
     Render Markdown to HTML according to a theme.
     """
-    def __init__(self, theme_dir, default_theme="github"):
+    def __init__(self, theme_dir, default_theme="decent"):
         self.theme_dir = theme_dir
         self.default_theme = default_theme
 
@@ -234,6 +236,7 @@ class GUI:
         self.history = []
         self.prev_key = None
         self.settings = QSettings("electricmonk", app_name)
+        self.immersive = False
 
         icon_path = \
             os.path.join(
@@ -733,6 +736,17 @@ class GUI:
         log.debug("history: {}".format(self.history))
         log.debug("geometry: {}".format(self.win.geometry()))
         log.debug("saveGeometry: {}".format(self.win.saveGeometry()))
+    def _ev_immerse(self):
+        self.immersive = not self.immersive
+        print("Toggle immersive", self.immersive)
+        if self.immersive:
+            self.toc_tree.hide()
+            self.toolbar.hide()
+        else:
+            self.toc_tree.show()
+            self.toolbar.show()
+    # TODO: ctrl+/ctrl- this.webview.setZoomFactor
+    # https://doc.qt.io/qt-5/qwebengineview.html#zoomFactor-prop
 
 
 if __name__ == "__main__":
@@ -755,12 +769,12 @@ if __name__ == "__main__":
                       "--theme",
                       dest="theme",
                       action="store",
-                      default="github",
-                      help="Theme (name or full path to .html). Default: github")
+                      default="decent",
+                      help="Theme (name or full path to .html). Default: decent")
     parser.add_option("--no-toc",
                       dest="toc",
                       action="store_false",
-                      default=True,
+                      default=False,
                       help="Disable the Table Of Contents sidebar")
 
     (options, args) = parser.parse_args()
